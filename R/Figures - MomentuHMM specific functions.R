@@ -1,3 +1,10 @@
+## Assign HMM state to dive batches and test covariates effect 
+##Author: Brett McClintock - https://github.com/bmcclintock/momentuHMM
+##Purpose: This code contains some functions developed in the momentuHMM package that needs to be loaded in the environment
+#          to recreate the stationary and transition probabilities figures.
+
+#Reference
+#McClintock, B. T. and T. Michelot (2018). "momentuHMM : R package for generalized hidden Markov models of animal movement." Methods in Ecology and Evolution 9(6): 1518-1530.
 
 #FORMATRECHARGE FUNCTION
 formatRecharge <- function(nbStates,formula,data,covs=NULL,par=NULL){
