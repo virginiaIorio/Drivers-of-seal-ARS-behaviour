@@ -14,6 +14,7 @@ p_load(momentuHMM, ggplot2, magrittr, tidyverse)
 is.between<-function(x, a, b) {
   (x >= a) & (b >= x)
 }
+
 is.integer0 <- function(x)
 {
   is.integer(x) && length(x) == 0L
@@ -22,6 +23,7 @@ is.integer0 <- function(x)
 # Data preparation -----------------------------------------------------------------------------------------
 ##Read in dataset
 df <- read.csv(here::here("Output", "Dive batches dataset - 2017.csv"), header=TRUE) 
+
 df <- df %>% mutate(
     ID = format(ID, nsmall=3),
     start.time = as.POSIXct(start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
@@ -60,7 +62,7 @@ for(i in 1:length(trips)){
   for(n in 1:length(HMM_tmp$ID)){
     m <- as.integer(which(is.between(gps_tmp$time, HMM_tmp$start.time[n], HMM_tmp$end.time[n])))
     if(is.integer0(m)){
-      if(HMM_tmp$batch.duration[n]<=15){
+      if(HMM_tmp$batch.duration[n]<=25){
         p <- as.integer(which(is.between(gps_tmp$time, HMM_tmp$start.time[n-1], HMM_tmp$end.time[n-1])))
         o <- as.integer(which(is.between(gps_tmp$time, HMM_tmp$start.time[n+1], HMM_tmp$end.time[n+1])))
         HMM_tmp$flag[n] <- ifelse(is.integer0(p) & is.integer0(o), 1 ,0)
@@ -144,8 +146,9 @@ stepPar0<-c(output$s1_mean[b],output$s2_mean[b],
             output$s1_zero[b],output$s2_zero[b])
 anglePar0<-c(output$s1_angle[b],output$s2_angle[b])
 
-stepPar0 <- c(1390.76332208,131.2383175,190.18469572,91.55341004,0.44187353,0.08603832)
-anglePar0 <- c(0.17120304,0.79857152)
+#Initial parameters of the best model in the iterations
+# stepPar0 <- c(1390.76332208,131.2383175,190.18469572,91.55341004,0.44187353,0.08603832)
+# anglePar0 <- c(0.17120304,0.79857152)
 
 m1 <- fitHMM(data=data, nbStates= nbstates, dist=dist, 
              Par0=list(step=stepPar0[1:4], angle=anglePar0),
