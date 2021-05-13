@@ -63,10 +63,10 @@ This script reports the codes used to create all the figures and tables presente
 * **Figures - momentuHMM specific functions**  
 This scripts contains copies of some functions from the [momentuHMM package](https://github.com/bmcclintock/momentuHMM) which are required to estimate the stationary and transition probabilities, and their confidence intervals. These functions have been copied and not modified.
 
-### License
+## License
 GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007 (GNU GPLv3)
 
-### References
+## References
 Cox, S. L., et al. (2018). "Processing of acceleration and dive data on‐board satellite relay tags to investigate diving and foraging behaviour in free‐ranging marine predators." Methods in Ecology and Evolution 9(1): 64-77. [doi.org/10.1111/2041-210X.12845](https://doi.org/10.1111/2041-210X.12845)
 
 Brasseur, S., et al. (2012). Habitat Preferences of Harbour Seals in the Dutch Coastal Area: Analysis and Estimate of Effects of Offshore Wind Farms (Report No. OWEZ R 252 T1 20120130 C043-10), IMARES - Wageningen UR, Noordzeewind: 58.  
