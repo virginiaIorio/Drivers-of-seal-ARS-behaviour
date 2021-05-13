@@ -60,7 +60,8 @@ ggplot()+
 
 ##Read in seal dive data --------------------------------------------------------------------------------------------
 dives <- read.csv(here::here("Datasets","pv64-2017_dive.csv"), header=TRUE)
-seal <- dives[,c(1,3,4,5,6,8,10:13,64)] %>%
+seal <- dives %>% 
+  select(ID,REF,PTT,DS_DATE,JUL,SURF_DUR,DE_DATE,START_LAT,START_LON,END_LAT,END_LON,Trip_Code)%>%
   mutate(seal_ID = ID,
          trip_code = format(Trip_Code, nsmall=3),
          ID = trip_code,
