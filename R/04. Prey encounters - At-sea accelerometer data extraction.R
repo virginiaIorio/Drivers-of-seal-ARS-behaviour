@@ -7,7 +7,7 @@
 
 ## Load packages --------------------------------------------------------------------------------------
 library(pacman)
-p_load(tidyverse, magritt)
+p_load(tidyverse, magrittr)
 
 
 # Store individual trip subsets

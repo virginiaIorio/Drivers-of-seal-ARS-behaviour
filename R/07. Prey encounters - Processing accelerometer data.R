@@ -5,12 +5,12 @@
 #          Dive metrics: - descent/bottom/ascent phase start time
 #                        - TAD (Time-at-depth index)
 #                        - descent/ascent speed
-#          Accelerometer output: - stroke rate and swimming effort for all dive phases
-#                                - Mean body pitch angle for all dive phases
-#                                - Prey catch attempts using "transmitted" and "archived" method from Cox et al. 2018 and benthic attempts from Brasseur et al. 2012 only for the bottom phase
-#                                - overlap attempts between the benthic attempts and either "transmitted" or "archived" methods
-#                                - Mean roll angle during the bottom phase of te dive
-#                                - Standard deviation of the dynamic acceleration during the bottom phase of the dive
+#          Accelerometer: - stroke rate and swimming effort for all dive phases
+#                         - Mean body pitch angle for all dive phases
+#                         - Prey catch attempts using "transmitted" and "archived" method from Cox et al. 2018 and benthic attempts from Brasseur et al. 2012 only for the bottom phase
+#                         - overlap attempts between the benthic attempts and either "transmitted" or "archived" methods
+#                         - Mean roll angle during the bottom phase of te dive
+#                         - Standard deviation of the dynamic acceleration during the bottom phase of the dive
 
 #References:
 #Brasseur, S., et al. (2012). Habitat Preferences of Harbour Seals in the Dutch Coastal Area: Analysis and Estimate of Effects of Offshore Wind Farms (Report No. OWEZ R 252 T1 20120130 C043-10), IMARES - Wageningen UR, Noordzeewind: 58.
@@ -22,7 +22,7 @@
 
 ## Load packages --------------------------------------------------------------------------------------
 library(pacman)
-p_load(tidyverse, magritter, ggplot2, roll, pracma, sf, rgdal, mefa, ggsn)
+p_load(tidyverse, magrittr, ggplot2, roll, pracma, sf, rgdal, mefa, ggsn)
 
 #Load functions
 source(here::here("R","06. Prey encounter - Accelerometer processing functions.R"))
