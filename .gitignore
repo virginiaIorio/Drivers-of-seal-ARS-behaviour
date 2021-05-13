@@ -1,0 +1,42 @@
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+*.docx
+*.pptx
+*.jpeg
+*.mmap
+*.mp4
+*.pdf
+*.png
+*.m
+*.xlsx
+*.sh
+*.pptm
+*.csv
+*.zip
+*.rtf
+*.log
+*.err
+*.out
+*.txt
+*.Rproj
+*.rda
+*.~$lock
+*.html
+*.gif
+*.tiff
+*.dbf
+*.prj
+*.shp
+*.shx
+*.rmd
+Graphs/
+MF_grid/
+Raster grids/
+Paola HMM outpu/
+Output/
+Figures/
+R/Old R codes/
+R/Environment saved/
+.Rproj.user
