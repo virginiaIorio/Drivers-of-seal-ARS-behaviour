@@ -31,7 +31,7 @@ maxx <- max(mem$x)
 mem_sf <- st_as_sf(mem, coords=c("x", "y"), crs=crs)
 
 ## Create empty raster -----------------------------------------------------------------------------------
-grid <- st_read("C:/Users/r02vi18/PhD_Virginia/Seal behaviour/HMM/Memory Hp2/MF_grid/MF_grid_1km_UTM30.shp")
+grid <- st_read(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 grid <- st_transform(grid, crs=crs)
 
 #Create raster size based on the data to analyse

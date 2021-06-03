@@ -59,7 +59,7 @@ ggplot()+
 
 
 ##Read in seal dive data --------------------------------------------------------------------------------------------
-dives <- read.csv(here::here("Datasets","pv64-2017_dive.csv"), header=TRUE)
+dives <- read.table(here::here("Dryad","pv64-2017_dive.txt"), sep="\t",header=TRUE)
 seal <- dives %>% 
   select(ID,REF,PTT,DS_DATE,JUL,SURF_DUR,DE_DATE,START_LAT,START_LON,END_LAT,END_LON,Trip_Code)%>%
   mutate(seal_ID = ID,
@@ -104,7 +104,7 @@ seal <- seal[,-c(16,17)]
 
 
 ##Filter the dataset for trips longer than 12 hours
-trip <- read.csv(here::here("Datasets","pv64-2017_trip_summaries.csv"), head=TRUE)
+trip <- read.table(here::here("Dryad","pv64-2017_trip_summaries.txt"),sep="\t", head=TRUE)
 trip <- trip[-c(which(trip$PTT=="99999")),]
 trip$Trip_Code <- format(trip$Trip_Code, nsmall=3)
 long_trips <- trip$Trip_Code[which(trip$Trip_Duration>12)]
@@ -114,8 +114,8 @@ seal <- seal[seal$ID %in% long_trips,]
 
 ##Filter the dataset for trips occurring in the first week post tagging
 #Read seal summary
-seal.summary <- read.csv(here::here("Datasets","Seal_summary.csv"), header=TRUE) %>%
-  mutate(date.cap = as.Date(Date_Captured, format="%d/%m/%Y"),
+seal.summary <- read.table(here::here("Dryad","pv64-2017_seal_summary.txt"),sep="\t", header=TRUE) %>%
+  mutate(date.cap = as.Date(Tag_start, format="%d/%m/%Y"),
          first.week = date.cap + 7)
 
 #Find the trips starting in the first week

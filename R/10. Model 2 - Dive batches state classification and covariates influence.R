@@ -53,7 +53,7 @@ seal.HMM <- prepData(df, type="UTM", coordNames=c("x", "y"), spatialCovs = list(
 
 
 ##Flag uncertain locations
-gps <- read.csv(here::here("Datasets", "pv64-2017_gps_data_with_haulout_&_trip_info.csv"), header=TRUE)
+gps <- read.table(here::here("Dryad", "pv64-2017_gps_data_with_haulout_&_trip_info.txt"),sep="\t" ,header=TRUE)
 gps$time <- as.POSIXct(gps$D_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC")
 gps$trip_code <- format(gps$trip_code, nsmal=3)
 

@@ -11,7 +11,7 @@ p_load(ggplot2, sf, rgdal, sp, adehabitatHR, tidyverse, magrittr, lubridate, ggs
 
 ## Data preparation ----------------------------------------------------------------------------
 #Read in trip summaries
-trip.summaries <- read.csv(here::here("Datasets", "pv64-2017_trip_summaries.csv"), header=TRUE)
+trip.summaries <- read.table(here::here("Dryad", "pv64-2017_trip_summaries.txt"), sep="\t",header=TRUE)
 trip.summaries$Trip_Code <- format(trip.summaries$Trip_Code, nsmall=3)
 
 dat <- read.csv(here::here("Output", "Model 1 - HMM dive batches classified.csv"), header=TRUE)
@@ -34,12 +34,12 @@ dat$month <- ifelse(dat$ID %in% month2, "2", dat$month)
 dat <- dat[which(dat$month>0),]
 
 #read in the coastaline shapefile as you will need it for plotting
-coastline <- st_read("C:/Users/r02vi18/PhD_Virginia/Seal behaviour/HMM/R/Bathymetry & Sediment/Coastline_UTM30.shp")
+coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create grid for which you are going to calculate the kernel UD. 
 #This grid is roughly 250mx250m and fits within the original 1x1km MF grid
 #Try with three different grid sizes: 100x100 m, 500x500 m and 1x1 km
-grid <- readOGR("C:/Users/r02vi18/PhD_Virginia/Seal behaviour/HMM/Memory Hp2/MF_grid/MF_grid_1km_UTM30.shp")
+grid <- readOGR(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 x <- seq(grid@bbox[1]+250, grid@bbox[3]-250, by=500)
 y <- seq(grid@bbox[2]+250, 6600733, by=500)
 xy <- expand.grid(x=x,y=y)

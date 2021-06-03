@@ -29,11 +29,11 @@ source(here::here("R","06. Prey encounter - Accelerometer processing functions.R
 
 ## Data preparation --------------------------------------------------------------------------------------
 #Dive data
-all_seal <- read.csv(here::here("Datasets", "pv64-2017_dive.csv"), header=TRUE) %>%
+all_seal <- read.table(here::here("Dryad", "pv64-2017_dive.txt"), sep="\t",header=TRUE) %>%
   mutate(DS_DATE = as.POSIXct(DS_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
          DE_DATE = as.POSIXct(DE_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"))
 
-all_trips <- read.csv(here::here("Datasets", "pv64-2017_trip_summaries.csv"), header=TRUE) %>%
+all_trips <- read.table(here::here("Dryad", "pv64-2017_trip_summaries.txt"),sep="\t" ,header=TRUE) %>%
   mutate(Trip_Start = as.POSIXct(Trip_Start , format="%Y-%m-%d %H:%M:%S", tz="UTC"),
          Trip_End = as.POSIXct(Trip_End , format="%Y-%m-%d %H:%M:%S", tz="UTC"))
 

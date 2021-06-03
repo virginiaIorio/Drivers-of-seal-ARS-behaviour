@@ -31,6 +31,9 @@
 *.shp
 *.shx
 *.rmd
+*.sbn
+*.sbx
+*.shp.xml
 Graphs/
 MF_grid/
 Raster grids/
@@ -40,3 +43,5 @@ Figures/
 R/Old R codes/
 R/Environment saved/
 .Rproj.user
+R/11.Figures and table.R
+R/Figures - MomentuHMM specific functions.R

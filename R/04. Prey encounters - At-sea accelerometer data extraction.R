@@ -16,7 +16,7 @@ IDs <- c(90,242,285,158,283)
 PTT <- c(14438,14464,14477,14478,14479)
 
 #CSV with trip data
-all_trips <- read.csv(here::here("Datasets", "pv64-2017_trip_summaries.csv"), header=TRUE) %>%
+all_trips <- read.tab;e(here::here("Dryad", "pv64-2017_trip_summaries.txt"),sep="\t", header=TRUE) %>%
   mutate(Trip_Start = as.POSIXct(Trip_Start , format="%Y-%m-%d %H:%M:%S", tz="UTC"),
          Trip_End = as.POSIXct(Trip_End , format="%Y-%m-%d %H:%M:%S", tz="UTC"))
 
@@ -24,14 +24,14 @@ all_trips <- read.csv(here::here("Datasets", "pv64-2017_trip_summaries.csv"), he
 #This code used the accelerometer data stored as rdata, needs to be moodified with any other format
 for(i in 1:length(PTT)){
   PTTseal = PTT[i]
-  load(paste0("F:/pv64_tag_archived_accelerometer_and_temperature_data/",PTTseal,"/",PTTseal,"_all_processed_StatDyn.rdata"))
+  acc <- read.table(here::here("Dryad","Accelerometer_data",paste0("Seal_",PTTseal,"_accelerometer.txt")), sep="\t", header=TRUE)
   
   trip_seal <- all_trips[which(all_trips$PTT %in% PTTseal),]
   
   for(x in 1:length(trip_seal$ID)){
     dates <- seq(as.Date(trip_seal$Trip_Start[x]), as.Date(trip_seal$Trip_End[x]), by="days")
     dates <- format(dates, "%Y/%m/%d")
-    tmp <- subset(pvac, DATE %in% dates)
+    tmp <- subset(acc, DATE %in% dates)
     if(length(tmp$ddate > 0)){
       tmp<- subset(tmp, tmp$ddate>= trip_seal$Trip_Start[x] &
                      tmp$ddate<= trip_seal$Trip_End[x])

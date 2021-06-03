@@ -11,7 +11,7 @@ p_load(sp, sf, magrittr, lubridate, tidyverse, geosphere, ggplot2,ggspatial)
 
 ## Create buffers around haul-out sites ----------------------------------------------------
 #Load coastline needed for plotting
-coastline <- st_read("C:/Users/r02vi18/PhD_Virginia/Seal behaviour/HMM/R/Bathymetry & Sediment/Coastline_UTM30.shp")
+coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create the two haul-out sites buffers to remove locations within 2km from the haul-out site
 #Create Loch Fleet buffer based on two points
@@ -78,7 +78,7 @@ seal <- seal[,-c(28,29)]
 
 
 ##Filter the dataset for trips longer than 12 hours
-trip <- read.csv(here::here("Datasets","pv64-2017_trip_summaries.csv"), head=TRUE)
+trip <- read.table(here::here("Dryad","pv64-2017_trip_summaries.tetx"),sep="\t", head=TRUE)
 trip <- trip[-c(which(trip$PTT=="99999")),]
 trip$Trip_Code <- format(trip$Trip_Code, nsmall=3)
 long_trips <- trip$Trip_Code[which(trip$Trip_Duration>12)]
@@ -87,10 +87,10 @@ seal <- seal[seal$ID %in% long_trips,]
 
 ##Filter the dataset for trips occurring in the first week post tagging
 #Read seal summary
-seal.summary <- read.csv(here::here("Datasets","Seal_summary.csv"), header=TRUE) %>%
-  mutate(date.cap = as.Date(Date_Captured, format="%d/%m/%Y"),
+seal.summary <- read.table(here::here("Dryad","pv64-2017_seal_summary.txt"),sep="\t", header=TRUE) %>%
+  mutate(date.cap = as.Date(Tag_start, format="%d/%m/%Y"),
          first.week = date.cap + 7)
-seal.summary <- seal.summary[which(seal.summary$Year.Captured == 2017),]
+
 #Find the trips starting in the first week
 trip$date <- as.Date(trip$Trip_Start)
 trip$first.week <- NA

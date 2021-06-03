@@ -39,7 +39,7 @@ df.HMM <- prepData(df, type="UTM", coordNames=c("x", "y"))
 
 ##Flag uncertain locations
 #Flag interpolated locations that don't have at least 1 GPS locations within a 30 minutes window
-gps <- read.csv(here::here("Datasets", "pv64-2017_gps_data_with_haulout_&_trip_info.csv"), header=TRUE)
+gps <- read.table(here::here("Dryad", "pv64-2017_gps_data_with_haulout_&_trip_info.txt"), sep="\t",header=TRUE)
 gps$time <- as.POSIXct(gps$D_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC")
 gps$trip_code <- format(gps$trip_code, nsmal=3)
 
