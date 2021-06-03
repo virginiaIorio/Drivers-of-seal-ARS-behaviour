@@ -57,12 +57,6 @@ This script is very similar to script 1. It filters the data and groups the dive
 * **10. Model 2 - Dive batches state classification and covariate influence**  
 This script follows the same steps of script 2 to run the HMM model. Additional steps are the import of the raster maps generated in script 8 and a covariates selection step, where the inclusion of either or both covariates is assessed.
 
-* **11. Figures and tables**  
-This script reports the codes used to create all the figures and tables presented in the paper and the supplementary materials. The codes are provided in the same order as the one in which they are presented in the paper. Most figures are plotted using outputs from previous steps in the analysis. To simplify plotting Figure 2 and S2, data subsets have been created and are provided in the "Data for figures" folder in the repository. To plot Figure 4 I have used parts of codes from the plot() function in the [momentuHMM package](https://github.com/bmcclintock/momentuHMM), which requires functions specified in the Figures - momentuHMM specific functions script.
-
-* **Figures - momentuHMM specific functions**  
-This scripts contains copies of some functions from the [momentuHMM package](https://github.com/bmcclintock/momentuHMM) which are required to estimate the stationary and transition probabilities, and their confidence intervals. These functions have been copied and not modified.
-
 ## License
 GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007 (GNU GPLv3)
 
