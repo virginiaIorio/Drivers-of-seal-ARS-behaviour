@@ -1,5 +1,5 @@
 ### Processing accelerometer data
-# Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
+# Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk) and Matt Carter (midc@st-andrews.ac.uk)
 # Purpose: This code uses the functions specified in script 6 and other calculations to calculate various 
 #          dive parameters and summarise the acceleormeter data in meaningful ways. 
 #          Dive metrics: - descent/bottom/ascent phase start time
@@ -13,8 +13,8 @@
 #                         - Standard deviation of the dynamic acceleration during the bottom phase of the dive
 
 #References:
-#Brasseur, S., et al. (2012). Habitat Preferences of Harbour Seals in the Dutch Coastal Area: Analysis and Estimate of Effects of Offshore Wind Farms (Report No. OWEZ R 252 T1 20120130 C043-10), IMARES - Wageningen UR, Noordzeewind: 58.
-#Cox, S. L., et al. (2018). "Processing of acceleration and dive data on‐board satellite relay tags to investigate diving and foraging behaviour in free‐ranging marine predators." Methods in Ecology and Evolution 9(1): 64-77.
+#Brasseur, S., et al. (2012). "Habitat Preferences of Harbour Seals in the Dutch Coastal Area: Analysis and Estimate of Effects of Offshore Wind Farms (Report No. OWEZ R 252 T1 20120130 C043-10), IMARES - Wageningen UR, Noordzeewind: 58".
+#Cox, S. L., et al. (2018). "Processing of acceleration and dive data on board satellite relay tags to investigate diving and foraging behaviour in free ranging marine predators." Methods in Ecology and Evolution 9(1): 64-77".
 
 # Output: A final dataset with rows representing individual dives and the parameters for that dive.
 # Created on: 12/01/2021
@@ -74,14 +74,14 @@ skipped <- NA
 
 for(l in 1:length(trip_seal$ID)){
     if(trip_seal$Trip_Duration[l]>1){
-      trip1 <- seal[which(seal$Trip_No==trip_seal$Trip_No[l]),]
+      trip <- seal[which(seal$Trip_No==trip_seal$Trip_No[l]),]
     if(length(trip$ID)>0){
     ## Define bottom phase of the dive -------------------------------------------------------------------------
     #Extract a dive threshold such as the 80% of the maximum depth of the dive
     trip$DThresh<-trip$MAX_DEP/100*80
     trip$DThresh <- round(trip$DThresh, digits=1)
     #Calculate the percentage of the dive which was at the bottom
-    trip$BTcols<-rowSums(trip[,38:60] > trip$DThresh) 
+    trip$BTcols<-rowSums(trip[,which(colnames(trip)=="D1"):which(colnames(trip)=="D23")] > trip$DThresh) 
     trip$BTprop<-trip$BTcols/23 #ignore T1:T2 and T20:T21 because they are not equally spaced
     #Calculate bottom time
     trip$BT<- trip$BTprop*trip$DIVE_DUR
@@ -91,8 +91,8 @@ for(l in 1:length(trip_seal$ID)){
     trip$infl_prop2 <- NA
     for(y in 1:length(trip$ID)){
     tmp <- trip[y,]
-    tmpT <- gather(tmp[15:37], "Ts", "percentage")
-    tmpD <- gather(tmp[38:60], "Ds", "depth")
+    tmpT <- gather(tmp[which(colnames(tmp)=="T1"):which(colnames(tmp)=="T23")], "Ts", "percentage")
+    tmpD <- gather(tmp[which(colnames(tmp)=="D1"):which(colnames(tmp)=="D23")], "Ds", "depth")
     tmp <- cbind(tmpT, tmpD)
     thrsh <- trip$DThresh[y]
     
@@ -120,8 +120,7 @@ for(l in 1:length(trip_seal$ID)){
     trip$bphase_sec_end <- ((trip$infl_prop2/100)*trip$DIVE_DUR)
     trip$bphase_end<- trip$DS_DATE + trip$bphase_sec_end
     
-    ## TAD and descent-ascent speed --------------------------------------------------------------
-    #For details look at the Matt Carter code
+    ## TAD and descent-ascent speed -------------------------------------------------------------
     DThresh<-1.5 #depth threshold defined by device
     trip$CorrDv<-trip$MAX_DEP-DThresh	
     x=seq(1,3,0.1)
@@ -168,15 +167,19 @@ for(l in 1:length(trip_seal$ID)){
     trip$CorrD<-trip$MAX_DEP-DThresh	
     trip$TAD<-(trip$PERCENT_AREA/100*trip$CorrD*trip$DIVE_DUR-trip$CorrD^2/S)/(trip$CorrD*trip$DIVE_DUR-2*trip$CorrD^2/S)
     
-    trip$descent.speed <- abs(trip$D2-trip$D1)/((2.5-1)*(1/100)*(trip$DIVE_DUR-4))
-    trip$ascent.speed <- (trip$D22-trip$D23)/((99-97.5)*(1/100)*(trip$DIVE_DUR-4))
+    trip$descent.speed <- abs(trip$D3-trip$D1)/((2.5-1)*(1/100)*(trip$DIVE_DUR-4))
+    trip$ascent.speed <- (trip$D21-trip$D23)/((99-97.5)*(1/100)*(trip$DIVE_DUR-4))
     trip$ascent_dur <- trip$DIVE_DUR- trip$bphase_sec_end
     
     #Get rid of sll the time depth columns
-    seal_tmp <- trip[,c(1:14,62:68,76,78,81:83)] #check the columns that you are extracting
+    seal_tmp <- trip %>% select(ID, REF, PTT, DS_DATE, JUL, DE_DATE, DIVE_DUR, SURF_DUR, MAX_DEP, 
+                                START_LAT, START_LON, END_LAT, END_LON, PERCENT_AREA, Trip_No,
+                                Posn_in_Trip, Trip_Code, date, sunrise, sunset, daynight, bphase_start,
+                                bphase_end, TAD, descent.speed, ascent.speed)
+    
     seal_tmp$descent_start <- as.POSIXct(seal_tmp$DS_DATE, format="%Y-%m-%d %H:%M:%OS", tz="GMT")
-    colnames(seal_tmp)[22] <- c("bottom_start")
-    colnames(seal_tmp)[23] <- c("ascent_start")
+    colnames(seal_tmp)[which(colnames(seal_tmp)=="bphase_start")] <- c("bottom_start")
+    colnames(seal_tmp)[which(colnames(seal_tmp)=="bphase_end")] <- c("ascent_start")
     
     seal_tmp <- seal_tmp[,c(1:21,27,22:26)] #Re-organise columns order
     
@@ -236,7 +239,7 @@ for(l in 1:length(trip_seal$ID)){
       sealdf$D_swim_eff.m_s[x] <- swimm_eff_df$swim_eff.m_s
       sealdf$D_mean_pitch[x] <- mean(descent$pitch)
       } else{
-        sealdf[x,28:31] <- NA
+        sealdf[x,which(colnames(sealdf)=="D_stroke_rate"):which(colnames(sealdf)=="D_mean_pitch")] <- NA
       }
     
       ## Bottom phase - accelerometer ---------------------------------------------------------------------
@@ -311,7 +314,7 @@ for(l in 1:length(trip_seal$ID)){
       sealdf$B_dyn_sd[x] <- sd(bt$Gd)
       sealdf$B_mean_pitch[x] <- mean(bt$pitch)
       } else{
-        sealdf[x,32:43] <- NA
+        sealdf[x,which(colnames(sealdf)=="B_PrCA_trans"):which(colnames(sealdf)=="B_mean_pitch")] <- NA
       }
 
       ## Ascent phase - Accelerometer -----------------------------------------------------------------------
@@ -327,13 +330,13 @@ for(l in 1:length(trip_seal$ID)){
         sealdf$A_swim_eff.m_s[x] <- swimm_eff_df$swim_eff.m_s
         sealdf$A_mean_pitch[x] <- mean(ascent$pitch)
       } else{
-        sealdf[x,44:47] <- NA
+        sealdf[x,which(colnames(sealdf)=="A_stroke_rate"):which(colnames(sealdf)=="A_mean_pitch")] <- NA
         }
       }else{
-        sealdf[x,27:47] <- NA
+        sealdf[x,which(colnames(sealdf)=="D_stroke_rate"):which(colnames(sealdf)=="A_mean_pitch")] <- NA
         }
       }else{
-        sealdf[x,27:47] <- NA
+        sealdf[x,which(colnames(sealdf)=="D_stroke_rate"):which(colnames(sealdf)=="A_mean_pitch")] <- NA
       }
     }
     tripsdf <- rbind(tripsdf, sealdf)
