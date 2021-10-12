@@ -1,5 +1,5 @@
-# Prey encounters and spatial memory influence Area Restricted Search behaviour in a marine central place forager
-R codes to reproduce the analysis presented in Iorio-Merlo et al. xxxx published in xxx. add link
+# Prey encounters and spatial memory influence use of foraging patches in a marine central place forager
+R codes to reproduce the analysis presented in Iorio-Merlo et al. _submitted_. add link
 The scripts provided allow to repeat the analysis presented in the publication starting from the the data available at dryad....
 
 ## R and packages
