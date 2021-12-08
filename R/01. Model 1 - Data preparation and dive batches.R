@@ -12,7 +12,7 @@ p_load(sp, sf, ggplot2, ggspatial, magrittr, lubridate, tidyverse, geosphere)
 
 ## Create buffers around haul-out sites ----------------------------------------------------
 #Load coastline needed for plotting
-coastline <- st_read("C:/Users/r02vi18/PhD_Virginia/Seal behaviour/HMM/R/Bathymetry & Sediment/Coastline_UTM30.shp")
+coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create the two haul-out sites buffers to remove locations within 2km from the haul-out site
 #Create Loch Fleet buffer based on two points
@@ -71,7 +71,7 @@ seal <- dives %>%
 seal <- seal[-c(which(seal$PTT=="99999")),]
 
 #Project locations onto UTM30
-llcord <- SpatialPoints(seal[,c(8,7)],
+llcord <- SpatialPoints(seal[,c("START_LON","START_LAT")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 seal$x <- attr(utmcoord, "coords")[,1]
@@ -81,7 +81,6 @@ seal$y <- attr(utmcoord, "coords")[,2]
 ggplot()+
   annotation_spatial(coastline, fill = "lightgrey", lwd = 0)+
   geom_point(data=seal, aes(x=x, y=y))+
-  facet_wrap(~year(time))+
   theme_classic()
 
 
@@ -99,8 +98,7 @@ seal_sf2 <- st_as_sf(seal, coords=c(x="x", y="y"), crs=32630) # already in UTM 3
 seal_at_sea2 <- st_difference(seal_sf2, buffer2)
 seal <- seal_at_sea2 
 st_geometry(seal) <- NULL
-seal <- seal[,-c(16,17)]
-
+seal <- seal[,-which(names(seal) %in% c("location","location.1"))]
 
 
 ##Filter the dataset for trips longer than 12 hours
@@ -122,7 +120,7 @@ seal.summary <- read.table(here::here("Dryad","pv64-2017_seal_summary.txt"),sep=
 trip$date <- as.Date(trip$Trip_Start)
 trip$first.week <- NA
 for(x in 1:length(trip$ID)){
-  n <- which(seal.summary$Tag_Number == trip$PTT[x])
+  n <- which(seal.summary$ID == trip$ID[x])
   trip$first.week[x] <- paste(seal.summary$first.week[n])
 }
 trip$first.week <- as.Date(trip$first.week)
@@ -133,11 +131,12 @@ seal <- seal[which(seal$ID %in% after.first.week.trips),]
 
 
 ##Filter for round.trips at the same haul out location
+#Round trips are defined as start and end haul-out are within 5km of each other
 trip$haulout.dist <- NA
 for(x in 1:length(trip$Trip_Code)){
   trip$haulout.dist[x] <- distm(c(trip$Start_Haulout_Lon[x], trip$Start_Haulout_Lat[x]), c(trip$End_Haulout_Lon[x], trip$End_Haulout_Lat[x]), fun=distHaversine)
 }
-round_trips <- trip$Trip_Code[which(trip$to.keep==1 & trip$Trip_Duration >12 & trip$haulout.dist<=2000)]
+round_trips <- trip$Trip_Code[which(trip$to.keep==1 & trip$Trip_Duration >12 & trip$haulout.dist<=5000)]
 seal <- seal[which(seal$ID %in% round_trips),]
 
 
@@ -176,7 +175,7 @@ for(n in 1:(length(seal$ID)-1)){
     batch.tmp$ID <- seal$ID[x]
     
     batch.tmp$start.time <- paste(seal$time[x])
-    batch.tmp$end.time <- paste(seal$time.end[y]+seal$SURF_DUR[y])
+    batch.tmp$end.time <- paste(seal$time[y]+seal$SURF_DUR[y])
     options(digits=2)
     batch.tmp$batch.duration <- difftime(seal$time[y], seal$time[x], units="mins")
     
@@ -189,11 +188,13 @@ for(n in 1:(length(seal$ID)-1)){
     
     seal.batch <- rbind(seal.batch, batch.tmp)
     x <- y+1
-  } else {}
+  } 
 }
+#Remove the first row of NAs
 seal.batch <- seal.batch[-c(1),]
 
-llcord <- SpatialPoints(seal.batch[,c(7,8)],
+
+llcord <- SpatialPoints(seal.batch[,c("batch.start.lon","batch.start.lat")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 seal.batch$x <- attr(utmcoord, "coords")[,1]
@@ -204,8 +205,25 @@ ggplot()+
   geom_point(data=seal.batch, aes(x=x, y=y))+
   theme_classic()
 
-#There are two dates that occurr at 00:00:00 and because this is causes problems in R modify with the following
-seal.batch$end.time[80121] <- paste("2017-06-11 23:59:59")
-seal.batch$start.time[80122] <- paste("2017-06-12 00:00:01")
+#There are some dates that occurr at 00:00:00 and because this is causes problems in R modify with the following
+seal.batch <- seal.batch %>% mutate(
+  #Transform in UTC
+  times = as.POSIXct(start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
+  timee = as.POSIXct(end.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
+  #Extract only the time to check the NAs
+  timeS = strftime(times, format="%H:%M:%S", tz="UTC"),
+  timeE = strftime(timee, format="%H:%M:%S", tz="UTC"),
+  #Extract the date
+  dateS = as.Date(start.time),
+  dateE = as.Date(end.time),
+  #Modify the NAs
+  timeS = ifelse(is.na(timeS), "00:00:01", timeS),
+  timeE = ifelse(is.na(timeE), "23:59:59", timeE),
+  #Correct original time column
+  start.time = paste(dateS, timeS),
+  end.time = paste(dateE, timeE)
+)
+
+seal.batch <- seal.batch[,-which(names(seal.batch) %in% c("times","timee","timeS","timeE","dateS","dateE"))]
 
 write.csv(seal.batch, here::here("Output","Dive batches dataset - 2017.csv"), row.names=FALSE)
