@@ -5,7 +5,7 @@
 #         2. Model 1 - initial parameters selection output.csv
 #         3. Model 1 - HMM dive batches classified.csv
 #Created on: 06/01/2021
-#Updated on: 12/01/2021
+#Updated on: 11/12/2021
 
 #Load necessary package and create these functions
 library(pacman)
@@ -77,13 +77,14 @@ for(i in 1:length(trips)){
 }
 
 flag.tmp <- flag.tmp[-1,]
+
 df.HMM$flag <- flag.tmp$flag
 df.HMM$step <- ifelse(df.HMM$flag==1, NA, df.HMM$step)
 df.HMM$angle <- ifelse(df.HMM$flag==1, NA, df.HMM$angle)
 
 #Remove ipossible step lenghts 
 #Moving at 1.5 m/s in 30 minutes a marine mammal cannot move further than 2700 m
-quant99.duration <- as.numeric(quantile(df.HMM$batch.duration, probs=.99))
+quant99.duration <- as.numeric(quantile(df.HMM$batch.duration, probs=.99, na.rm=TRUE))
 max.distance <- quant99.duration*60*1.5
 
 df.HMM$step <- ifelse(df.HMM$step>max.distance, NA, df.HMM$step)
@@ -92,20 +93,23 @@ df.HMM$angle <- ifelse(df.HMM$step>max.distance, NA, df.HMM$angle)
 hist(df.HMM$step)
 hist(df.HMM$angle)
 
+df.HMM$step <- ifelse(df.HMM$step>max.distance, NA, df.HMM$step) ########
+hist(df.HMM$step)
+
 #Save dataset for model
 write.csv(df.HMM, here::here("Output","Model 1 - dataset.csv"), row.names=TRUE)
 
 # Select model initial values ===================================================================================
-data = df.HMM
+data = df.HMM 
 m_list<-list()
-n_its<-50
+n_its<-50 
 output<-data.frame(iter<-seq(1,n_its), s1_mean = NA, s2_mean = NA,
                    s1_sd = NA, s2_sd = NA, s1_zero= NA, s2_zero =NA,
                    s1_angle= NA, s2_angle = NA, AIC = NA, loglik = NA)
 stateNames <- c("state1","state2")
 dist <- list(step="gamma", angle="wrpcauchy")
 i <- 1
-for(i in 1:n_its){
+for(i in 15:n_its){
   output$s1_mean[i]<-runif(1,700,1500)
   output$s2_mean[i]<-runif(1,50,500)
   output$s1_sd[i]<-runif(1,100,200)
@@ -128,10 +132,12 @@ for(i in 1:n_its){
   try(output$loglik[i]<-m_list[[i]]$mod$minimum,silent=TRUE)
   print(i)
 }
+
 plot(output$iter....seq.1..n_its., output$AIC)
 
 #Include the saving output
 write.csv(output, here::here("Output","Model 1 - initial parameters selection output.csv"), row.names=TRUE)
+output <- read.csv(here::here("Output","Model 1 - initial parameters selection output.csv"), header=TRUE)
 
 # Running the model ###########################################################################################
 data=df.HMM
@@ -160,10 +166,15 @@ AIC(m1)
 -2*(-m1$mod$minimum)+length(m1$mod$wpar)*log(length(data$ID))
 plot(m1, plotTracks = FALSE)
 plotPR(m1)
-#state2 <- ARS
-df.HMM$HMMstate <- viterbi(m1) 
 
+df.HMM$HMMstate <- viterbi(m1) 
 df.HMM$HMMstate <- ifelse(is.na(df.HMM$step), NA, df.HMM$HMMstate)
-df.HMM$state <- ifelse(df.HMM$HMMstate==2, "ARS", "Transit")
+
+step.state1 <- m1[["CIreal"]][["step"]][["est"]][1]
+step.state2 <- m1[["CIreal"]][["step"]][["est"]][3]
+ARS <- as.numeric(which.min(c(step.state1, step.state2)))
+
+df.HMM$state <- ifelse(df.HMM$HMMstate==ARS, "ARS", "Transit")
 
 write.csv(df.HMM, here::here("Output", "Model 1 - HMM dive batches classified.csv"), row.names = TRUE)
+
