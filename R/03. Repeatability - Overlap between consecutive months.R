@@ -145,7 +145,7 @@ for(y in 1:length(df$seal_ID)){
   #For each trip extract the 95% utilization distribution
   utilizations <- list()
    for(x in 1:length(kd)){
-     ud1 <- getverticeshr.estUD(kd[[x]], 95)
+     ud1 <- getverticeshr.estUD(kd[[x]], 50)
      utilizations[[x]] <- ud1
    }
     
@@ -209,11 +209,12 @@ for(y in 1:length(df$seal_ID)){
            device="png", height=6, width = 8, unit="in")
     
     #Calculate overlap between consecutive trips
-    overlap <- kerneloverlaphr(kd, method="BA", percent=95, conditional = TRUE)
+    overlap <- kerneloverlaphr(kd, method="BA", percent=50, conditional = TRUE)
     overlap <- as.data.frame(overlap)
     df$BA_overlap[y] <- overlap[1,2]
   print(y)
 }
+hist(df$BA_overlap)
 
 write.csv(df, here::here("Output","Repeatability overlap between April and May.csv"), row.names=FALSE)
 
@@ -246,10 +247,11 @@ for(y in 1:length(df$seala)){
   #kd1 <- kernelUD(spfor[,1], h=5000, grid=xy3, kern=c("bivnorm"))
   
   #Calculate overlap between consecutive trips
-  overlap <- kerneloverlaphr(kd, method="BA", percent=95, conditional = TRUE)
+  overlap <- kerneloverlaphr(kd, method="BA", percent=50, conditional = TRUE)
   overlap <- as.data.frame(overlap)
   df$BA_overlap[y] <- overlap[1,2]
   print(y)
 }
 hist(df$BA_overlap)
 write.csv(df, here::here("Output","Repeatability - null distribution overlap.csv"), row.names=FALSE)
+
