@@ -1,10 +1,13 @@
 ###Utilization distributions
 ##Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
 ##Purpose: The code calculates kernel densities curves and utilization distributions of seals foraging patches
-##Output: For each seal UD maps (95%, 75%, 50% and 25%) and overlap in ARS UD between consecutive trips (95%, 75%, 50% and 25%)
+##Output: For each seal we first calculate the overlap in utilization distribution between
+#         two consecutive months (here April and May).
+#         The we calculate a null distribution overlap between a randomised pair-wise comparison
+#         with other individuals in the population. 
 
 #Created on: 19/01/2021
-#Updated on: 13/05/2021
+#Updated on: 13/12/2021
 
 library(pacman)
 p_load(ggplot2, sf, rgdal, sp, adehabitatHR, tidyverse, magrittr, lubridate, ggspatial)
@@ -37,8 +40,7 @@ dat <- dat[which(dat$month>0),]
 coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create grid for which you are going to calculate the kernel UD. 
-#This grid is roughly 250mx250m and fits within the original 1x1km MF grid
-#Try with three different grid sizes: 100x100 m, 500x500 m and 1x1 km
+#This grid is roughly 500mx500m and fits within the original 1x1km MF grid
 grid <- readOGR(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 x <- seq(grid@bbox[1]+250, grid@bbox[3]-250, by=500)
 y <- seq(grid@bbox[2]+250, 6600733, by=500)
@@ -46,26 +48,89 @@ xy <- expand.grid(x=x,y=y)
 coordinates(xy) <- ~x+y
 gridded(xy) <- TRUE
 
-## UD and overlap -----------------------------------------------------------------------------
+# UD and overlap -----------------------------------------------------------------------------
+## Determine h ======================================
+#Use the methods of Lascelles et al. 2016 in Diversity and distribution to define h
+time <- as.POSIXct(dat$start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC")
+traj <- as.ltraj(data.frame(dat$x, dat$y),date=time,id=dat$seal_ID, typeII = TRUE)
+
+Scales <- c(seq(0.5, 15, 0.5))
+Scales <- Scales*1000
+fpt.out <- fpt(traj, radii = Scales, units = "seconds")
+fpt.scales <- varlogfpt(fpt.out, graph = FALSE)
+Temp <- as.double(fpt.scales[1,])
+plot(Scales, Temp, type="l", ylim=c(0, max(fpt.scales, na.rm=T)))
+
+ars.scales <- NULL
+UIDs <- unique(dat$seal_ID)
+for(i in 1:length(UIDs)){
+  if(length(Scales) == length(which(is.na(fpt.scales[i,])))) {print(paste("Warning: ID", UIDs[i], "is smaller than smallest scale and will be ignored")); next}
+  Temp <- as.double(fpt.scales[i,])
+  #lines(Scales,Temp)
+  plot(Scales, Temp, type="l")
+  
+  q <- which(!is.na(Temp))
+  p <- 2
+  while(!is.na(Temp[q[p]]) & Temp[q[p]] < Temp[q[p-1]] & q[p] != length(Temp)) {p <- p + 1}
+  while(!is.na(Temp[q[p]]) & Temp[q[p]] > Temp[q[p-1]]) {p <- p + 1}
+  
+  rfpt <- Scales[q[p-1]]
+  if(suppressWarnings(min(which(is.na(Temp))) == p)) {print(paste("ID", UIDs[i], "has no peak")); next}
+  FirstPeak <- Scales[q[p-1]]
+  MaxPeak <- Scales[which(Temp == max(Temp[q[p-1]:length(Temp)], na.rm=T))]
+  if(Peak == "Flexible") {
+    if(FirstPeak < MaxPeak[1])
+    {
+      MaxPeak <- MaxPeak[MaxPeak >= FirstPeak]
+      ifelse(MaxPeak[1] < FirstPeak + (max(Scales)/3), ars.sc <- MaxPeak[1], ars.sc <- FirstPeak)
+    }  else  {ars.sc <- FirstPeak}
+  }
+  if(Peak == "Max") {ars.sc <- MaxPeak}
+  if(Peak == "First")  {ars.sc <- FirstPeak}
+  if(Peak == "User")
+  {
+    print("Select Peak on Graph")
+    N <- identify(Scales, Temp, n=1)
+    ars.sc <- Scales[N]
+  }
+  abline(v=ars.sc, col="red", lty=2)
+  ars.scales <- c(ars.scales, ars.sc)
+  #print(ars.sc)
+  #readline("proceed?")
+}
+
+AprScale <- mean(ars.scales)
+AprScale <- round(AprScale/1000,3)
+plot((Scales/1000), Temp, type="l", ylim=c(0, max(fpt.scales, na.rm=T)), xlab="Scales (km)", ylab="")
+for(i in 1:length(UIDs)){
+  Temp <- as.double(fpt.scales[i,])
+  lines((Scales/1000),Temp)
+}
+abline(v=ars.scales/1000, col="red", lty=2)
+abline(v=AprScale, col="darkred", lty=1, lwd=3)
+#print(ars.scales)
+#print(AprScale)
+text(max(Scales/1000)/2, 1, paste(AprScale, "km"), col="darkred", cex=3)
+
+
+## Utilization distribution ============================
 #Create utilization distribution and calculate foraging trips overlap wihtin individuals
 seal.Ids <- unique(dat$seal_ID)
 #Error at seal number 7 because she is the one that goes to Orkney
 #Error at seal 8 because outlier GPS locations and because she goes to orkney again
 
+#Remove seal 59 and 280 because there are not trips in May
+dat <- dat[-which(dat$seal_ID==59),]
+dat <- dat[-which(dat$seal_ID==280),]
+
 df <- data.frame(seal_ID = unique(dat$seal_ID), month1_n_trips = NA,
                  month2_n_trips = NA, BA_overlap = NA)
 
-for(y in 27:length(df$seal_ID)){
+for(y in 1:length(df$seal_ID)){
   tmp <- dat[which(dat$seal_ID==df$seal_ID[y]),]
   
   #Extract all locations classified as ARS
   tmpfr <- tmp[which(tmp$state=="ARS"),]
-  
-  #Create list of Trip ID that don't have enough observations
-  # splst <- tmpfr %>% group_by(ID) %>% summarize(n = n()) %>% arrange(n) %>%
-  #   filter(n > 9) %>% dplyr::select(ID) %>% extract2(1) %>% as.character()
-  # #Remove trips that don't have eough observations
-  #tmpfr <- tmpfr %>% filter(ID %in% splst) %>% droplevels()
   
   #Make ARS location a spatial point dataframe to maintain the 
   spfor <- SpatialPointsDataFrame(coordinates(cbind(tmpfr$x, tmpfr$y)),  data=tmpfr, proj4string = CRS("+proj=utm +zone=30 ellps=WGS84 +datum=WGS84"))
@@ -75,7 +140,7 @@ for(y in 27:length(df$seal_ID)){
   
   #Calculate kernel density curve
   #h <- c(50,250,500,1000,1500,2000)
-  kd <- kernelUD(spfor[,15], h=2000, grid=xy, kern=c("bivnorm"))
+  kd <- kernelUD(spfor[,15], h=5859, grid=xy, kern=c("bivnorm"))
   
   #For each trip extract the 95% utilization distribution
   utilizations <- list()
@@ -140,7 +205,7 @@ for(y in 27:length(df$seal_ID)){
       xlab("Longitude")+ylab("Latitude")+
       theme_classic()+
       theme(legend.position = "top")
-    ggsave(plot=ARS.UD.plot , filename=here::here("Figures","Repeatability", paste0("ARS_95_UD_seal",seal.Ids[y],"_2017.png")),
+    ggsave(plot=ARS.UD.plot , filename=here::here("Figures","Repeatability","New plots", paste0("ARS_95_UD_seal",seal.Ids[y],"_2017.png")),
            device="png", height=6, width = 8, unit="in")
     
     #Calculate overlap between consecutive trips
@@ -153,16 +218,15 @@ for(y in 27:length(df$seal_ID)){
 write.csv(df, here::here("Output","Repeatability overlap between April and May.csv"), row.names=FALSE)
 
 ## Overlap null distribution ---------------------------------------------------------------------------------------
+#Randomised pair-wise comparison
 tmp <- unique(dat$seal_ID)
-tmp <- tmp[-which(tmp==59 | tmp==280)]
-df <- data.frame(seala = NA, sealb= NA)
+df <- data.frame(seala = tmp, sealb= NA)
+
 for(x in 1:length(tmp)){
-  seala <- rep(tmp[x], length(tmp)-1)
-  sealb <- tmp[which(tmp != tmp[x])]
-  cols <- cbind(seala,sealb)
-  df <- rbind(df, cols)
+  tmp2 <- tmp[-which(tmp==tmp[x])]
+  sealb <- sample(tmp2, 1)
+  df$sealb[x] <- sealb
 }
-df <- df[-1,]
 
 df$BA_overlap <- NA
 
@@ -178,7 +242,7 @@ for(y in 1:length(df$seala)){
   spfor <- SpatialPointsDataFrame(coordinates(cbind(tmpfr$x, tmpfr$y)),  data=tmpfr, proj4string = CRS("+proj=utm +zone=30 ellps=WGS84 +datum=WGS84"))
   
   #Calculate kernel density curve
-  kd <- kernelUD(spfor[,15], h=2000, grid=xy, kern=c("bivnorm"))
+  kd <- kernelUD(spfor[,15], h=5859, grid=xy, kern=c("bivnorm"))
   #kd1 <- kernelUD(spfor[,1], h=5000, grid=xy3, kern=c("bivnorm"))
   
   #Calculate overlap between consecutive trips
@@ -187,5 +251,5 @@ for(y in 1:length(df$seala)){
   df$BA_overlap[y] <- overlap[1,2]
   print(y)
 }
-
+hist(df$BA_overlap)
 write.csv(df, here::here("Output","Repeatability - null distribution overlap.csv"), row.names=FALSE)
