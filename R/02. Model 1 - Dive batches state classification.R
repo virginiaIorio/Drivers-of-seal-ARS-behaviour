@@ -5,7 +5,7 @@
 #         2. Model 1 - initial parameters selection output.csv
 #         3. Model 1 - HMM dive batches classified.csv
 #Created on: 06/01/2021
-#Updated on: 11/12/2021
+#Updated on: 16/12/2021
 
 #Load necessary package and create these functions
 library(pacman)
@@ -37,7 +37,7 @@ df <- df[which(!df$ID %in% short.trips),]
 ##Prepare data for HMM
 df.HMM <- prepData(df, type="UTM", coordNames=c("x", "y"))
 
-##Flag uncertain locations
+##Flag unreliable locations (see methods)
 #Flag interpolated locations that don't have at least 1 GPS locations within a 30 minutes window
 gps <- read.table(here::here("Dryad", "pv64-2017_gps_data_with_haulout_&_trip_info.txt"), sep="\t",header=TRUE)
 gps$time <- as.POSIXct(gps$D_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC")
@@ -82,7 +82,7 @@ df.HMM$flag <- flag.tmp$flag
 df.HMM$step <- ifelse(df.HMM$flag==1, NA, df.HMM$step)
 df.HMM$angle <- ifelse(df.HMM$flag==1, NA, df.HMM$angle)
 
-#Remove ipossible step lenghts 
+#Remove impossible step lengths 
 #Moving at 1.5 m/s in 30 minutes a marine mammal cannot move further than 2700 m
 quant99.duration <- as.numeric(quantile(df.HMM$batch.duration, probs=.99, na.rm=TRUE))
 max.distance <- quant99.duration*60*1.5
@@ -100,6 +100,7 @@ hist(df.HMM$step)
 write.csv(df.HMM, here::here("Output","Model 1 - dataset.csv"), row.names=TRUE)
 
 # Select model initial values ===================================================================================
+#Run f50 iterations to find best initial parameters
 data = df.HMM 
 m_list<-list()
 n_its<-50 
@@ -170,6 +171,7 @@ plotPR(m1)
 df.HMM$HMMstate <- viterbi(m1) 
 df.HMM$HMMstate <- ifelse(is.na(df.HMM$step), NA, df.HMM$HMMstate)
 
+#Assign the state with the shortest step length as ARS
 step.state1 <- m1[["CIreal"]][["step"]][["est"]][1]
 step.state2 <- m1[["CIreal"]][["step"]][["est"]][3]
 ARS <- as.numeric(which.min(c(step.state1, step.state2)))
