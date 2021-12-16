@@ -26,10 +26,10 @@ all_rasters <- list.files(raster_path,
 stack <- stack(all_rasters)
 Brick <- brick(stack)
 
-IDs <- c(242,90,285,158,283)
-Brick@data@names <- as.character(IDs)
-Brick <- setZ(Brick, IDs, name='seal_ID')
-plot(Brick$X90)
+#IDs <- c(242,90,285,158,283)
+#Brick@data@names <- as.character(IDs)
+Brick <- setZ(Brick, Brick@data@names, name='seal_ID')
+plot(Brick$seal_158)
 
 Brick[is.na(Brick[])] <- 0
 
@@ -47,10 +47,10 @@ tmp <- df %>% group_by(df$ID) %>% summarise(n=n())
 short.trips <- tmp$`df$ID`[which(tmp$n<3)]
 df <- df[which(!df$ID %in% short.trips),]
 
+df$seal_ID <- paste0("seal_",df$seal_ID)
 
 ##Prepare data for HMM
 seal.HMM <- prepData(df, type="UTM", coordNames=c("x", "y"), spatialCovs = list(memory=Brick))
-
 
 ##Flag uncertain locations
 gps <- read.table(here::here("Dryad", "pv64-2017_gps_data_with_haulout_&_trip_info.txt"),sep="\t" ,header=TRUE)
@@ -68,7 +68,6 @@ flag.tmp[1,] <- NA
 flag.tmp$flag <- NA
 
 #Flagging for batch data
-  
 for(i in 1:length(trips)){
   HMM_tmp <- subset(seal.HMM, seal.HMM$ID==trips[i])
   gps_tmp <- subset(gps, gps$trip_code==trips[i])
@@ -106,7 +105,7 @@ hist(seal.HMM$step)
 hist(seal.HMM$angle)
 
 #Save dataset for model
-write.csv(seal.HMM, here::here("Output","Model 2 - dataset.csv"), row.names=TRUE)
+write.csv(seal.HMM, here::here("Output","Model 3 - dataset.csv"), row.names=TRUE)
 
 
 ## Select model initial parameters ------------------------------------------------------------------------------------
@@ -145,8 +144,8 @@ plot(output$iter....seq.1..n_its., output$AIC)
 plot(output$iter....seq.1..n_its., output$loglik)
 
 #Include the saving output
-write.csv(output, here::here("Output","Model 2 - initial parameters selection output.csv"), row.names=TRUE)
-output <- read.csv(here::here("Output","Model 2 - initial parameters selection output.csv"))
+write.csv(output, here::here("Output","Model 3 - initial parameters selection output.csv"), row.names=TRUE)
+output <- read.csv(here::here("Output","Model 3 - initial parameters selection output.csv"))
 
 ## Run simple model --------------------------------------------------------------------------------------------------------
 data=seal.HMM
@@ -199,28 +198,33 @@ model.selection$delta.AIC <- model.selection$AIC - model.selection$AIC[n]
 n <- which.min(model.selection$BIC)
 model.selection$delta.BIC <- model.selection$BIC - model.selection$BIC[n]
 
-write.csv(model.selection, here::here("Output", "Model 2 - Covariates model selection.csv"), row.names=FALSE)
+write.csv(model.selection, here::here("Output", "Model 3 - Covariates model selection.csv"), row.names=FALSE)
 
 ## Model 2 - drivers of ARS ------------------------------------------------------------------------------------------
-formula <- ~ batch.foraging.index + memory
+formula <- ~ batch.foraging.index+memory
 Par0 <- getPar0(ms, nbStates = nbstates, formula=formula)
-m2 <- fitHMM(data=data, nbStates= nbstates, dist=dist, 
+m3 <- fitHMM(data=data, nbStates= nbstates, dist=dist, 
             Par0=list(step=Par0$Par$step, angle=Par0$Par$angle),
             stateNames=stateNames, formula= formula) 
 
--m2$mod$minimum #Log-likelihood
-AIC(m2) #AIC
--2*(-m2$mod$minimum)+length(m2$mod$wpar)*log(length(data$ID)) #BIC
+-m3$mod$minimum #Log-likelihood
+AIC(m3) #AIC
+-2*(-m3$mod$minimum)+length(m3$mod$wpar)*log(length(data$ID)) #BIC
 
-plot(m2, plotCI=TRUE, plotTracks=FALSE)
-plotPR(m2)
-plotStationary(m2, plotCI=TRUE)
+plot(m3, plotCI=TRUE, plotTracks=FALSE)
+plotPR(m3)
+plotStationary(m3, plotCI=TRUE)
 
-seal.HMM$HMMstate <- viterbi(m2)
+plot(m3, plotCI=TRUE, plotTracks=FALSE)
+
+seal.HMM$HMMstate <- viterbi(m3)
 seal.HMM$HMMstate <- ifelse(seal.HMM$flag==1, NA, seal.HMM$HMMstate)
-seal.HMM$state <- ifelse(seal.HMM$HMMstate==1, "ARS", "Transit")
 
-write.csv(seal.HMM, here::here("Output", "Model 2 - HMM dive batches classified.csv"), row.names = TRUE)
+step.state1 <- m3[["mle"]][["step"]][1]
+step.state2 <- m3[["mle"]][["step"]][3]
 
+step.ARS <- as.numeric(which.min(c(step.state1, step.state2)))
 
+seal.HMM$state <- ifelse(seal.HMM$HMMstate==step.ARS, "ARS", "Transit")
 
+write.csv(seal.HMM, here::here("Output", "Model 3 - HMM dive batches classified.csv"), row.names = TRUE)

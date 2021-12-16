@@ -78,7 +78,7 @@ seal <- seal[,-c(28,29)]
 
 
 ##Filter the dataset for trips longer than 12 hours
-trip <- read.table(here::here("Dryad","pv64-2017_trip_summaries.tetx"),sep="\t", head=TRUE)
+trip <- read.table(here::here("Dryad","pv64-2017_trip_summaries.txt"),sep="\t", head=TRUE)
 trip <- trip[-c(which(trip$PTT=="99999")),]
 trip$Trip_Code <- format(trip$Trip_Code, nsmall=3)
 long_trips <- trip$Trip_Code[which(trip$Trip_Duration>12)]
@@ -95,7 +95,7 @@ seal.summary <- read.table(here::here("Dryad","pv64-2017_seal_summary.txt"),sep=
 trip$date <- as.Date(trip$Trip_Start)
 trip$first.week <- NA
 for(x in 1:length(trip$ID)){
-  n <- which(seal.summary$Tag_Number == trip$PTT[x])
+  n <- which(seal.summary$ID == trip$ID[x])
   trip$first.week[x] <- paste(seal.summary$first.week[n])
 }
 trip$first.week <- as.Date(trip$first.week)
@@ -120,7 +120,6 @@ tripsNA <- as.factor(unique(forNA$ID))
 
 '%!in%' <- function(x,y)!('%in%'(x,y))
 seal <- seal[which(seal$ID %!in% tripsNA),] 
-
 
 
 ## Create dive batches --------------------------------------------------------------------------------------------------
@@ -167,7 +166,7 @@ for(n in 1:(length(seal$ID)-1)){
     batch.tmp$ID <- seal$ID[x]
     
     batch.tmp$start.time <- paste(seal$time[x])
-    batch.tmp$end.time <- paste(seal$time.end[y]+seal$SURF_DUR[y])
+    batch.tmp$end.time <- paste(seal$time[y]+seal$SURF_DUR[y])
     options(digits=2)
     batch.tmp$batch.duration_mins <- difftime(seal$time[y], seal$time[x], units="mins")
     batch.tmp$batch.pos.trip.start <- seal$Posn_in_Trip[x]
@@ -198,7 +197,7 @@ for(n in 1:(length(seal$ID)-1)){
     
     seal.batch <- rbind(seal.batch, batch.tmp)
     x <- y+1
-  } else {}
+  } 
 }
 seal.batch <- seal.batch[-c(1),]
 

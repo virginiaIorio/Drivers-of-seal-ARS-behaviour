@@ -1,6 +1,6 @@
 ### Extracting accelerometer data
 # Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
-# Purpose: This code extract from the accelerometer dataset only the times that sel was at sea.
+# Purpose: This code extract from the accelerometer dataset only the times that seal was at sea.
 # Output: Individual trips output files with the accelerometer data.
 # Created on: 14/01/2021
 # Updated on: 13/05/2021
