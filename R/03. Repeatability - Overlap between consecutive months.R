@@ -1,16 +1,18 @@
-###Utilization distributions
+###Utilization distributions and overlap for all the individuals between two consecutive months
 ##Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
 ##Purpose: The code calculates kernel densities curves and utilization distributions of seals foraging patches
-##Output: For each seal we first calculate the overlap in utilization distribution between
+##Output: We first used the methods by Lascelles et al. 2016 to estimate the most appropriate 
+#         smoothing paramter h.
+#         For each seal we first calculate the overlap in utilization distribution between
 #         two consecutive months (here April and May).
 #         The we calculate a null distribution overlap between a randomised pair-wise comparison
-#         with other individuals in the population. 
+#         with another individual in the population. 
 
 #Created on: 19/01/2021
-#Updated on: 13/12/2021
+#Updated on: 16/12/2021
 
 library(pacman)
-p_load(ggplot2, sf, rgdal, sp, adehabitatHR, tidyverse, magrittr, lubridate, ggspatial)
+p_load(ggplot2, sf, rgdal, sp, adehabitatHR, tidyverse, magrittr, lubridate, ggspatial, adehabitatLT)
 
 ## Data preparation ----------------------------------------------------------------------------
 #Read in trip summaries
@@ -18,16 +20,13 @@ trip.summaries <- read.table(here::here("Dryad", "pv64-2017_trip_summaries.txt")
 trip.summaries$Trip_Code <- format(trip.summaries$Trip_Code, nsmall=3)
 
 dat <- read.csv(here::here("Output", "Model 1 - HMM dive batches classified.csv"), header=TRUE)
-dat <- dat %>% select(ID,seal_ID,PTT,start.time,end.time,batch.duration,batch.start.lon,batch.start.lat,
+dat <- dat %>%dplyr::select(ID,seal_ID,PTT,start.time,end.time,batch.duration,batch.start.lon,batch.start.lat,
                       batch.end.long,batch.end.lat,x,y,HMMstate,state)
 
 dat$ID <- format(dat$ID, nsmall=3)
 
 #For each seall extract month 1 (= April) and month 2 (= May)
 trip.summaries$month <- month(as.Date(trip.summaries$Trip_Start))
-#months <- c(4,5)
-# trips <- trip.summaries[which(trip.summaries$month %in% months),]
-# trips.list <- trips$Trip_Code
 month1 <- trip.summaries$Trip_Code[which(trip.summaries$month==4)]
 month2 <- trip.summaries$Trip_Code[which(trip.summaries$month==5)]
 
@@ -48,9 +47,11 @@ xy <- expand.grid(x=x,y=y)
 coordinates(xy) <- ~x+y
 gridded(xy) <- TRUE
 
-# UD and overlap -----------------------------------------------------------------------------
+
 ## Determine h ======================================
-#Use the methods of Lascelles et al. 2016 in Diversity and distribution to define h
+# Use the methods of Lascelles et al. 2016 in Diversity and distribution to define h
+# This next section of the code was copied from the appendix S5 of Lascelles et al. 2016
+# https://onlinelibrary.wiley.com/doi/full/10.1111/ddi.12411
 time <- as.POSIXct(dat$start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC")
 traj <- as.ltraj(data.frame(dat$x, dat$y),date=time,id=dat$seal_ID, typeII = TRUE)
 
@@ -60,6 +61,7 @@ fpt.out <- fpt(traj, radii = Scales, units = "seconds")
 fpt.scales <- varlogfpt(fpt.out, graph = FALSE)
 Temp <- as.double(fpt.scales[1,])
 plot(Scales, Temp, type="l", ylim=c(0, max(fpt.scales, na.rm=T)))
+Peak <- "Flexible"
 
 ars.scales <- NULL
 UIDs <- unique(dat$seal_ID)
@@ -101,6 +103,10 @@ for(i in 1:length(UIDs)){
 
 AprScale <- mean(ars.scales)
 AprScale <- round(AprScale/1000,3)
+
+
+jpeg(filename = here::here("Figures","Repeatability - smoothing parameter selection.jpeg"), 
+      width = 1800, height = 1580, res=300)
 plot((Scales/1000), Temp, type="l", ylim=c(0, max(fpt.scales, na.rm=T)), xlab="Scales (km)", ylab="")
 for(i in 1:length(UIDs)){
   Temp <- as.double(fpt.scales[i,])
@@ -110,14 +116,14 @@ abline(v=ars.scales/1000, col="red", lty=2)
 abline(v=AprScale, col="darkred", lty=1, lwd=3)
 #print(ars.scales)
 #print(AprScale)
-text(max(Scales/1000)/2, 1, paste(AprScale, "km"), col="darkred", cex=3)
+text(max(Scales/1000)/2, 5, paste(AprScale, "km"), col="darkred", cex=3)
+dev.off()
 
 
-## Utilization distribution ============================
+
+## Utilization distribution ============================================
 #Create utilization distribution and calculate foraging trips overlap wihtin individuals
 seal.Ids <- unique(dat$seal_ID)
-#Error at seal number 7 because she is the one that goes to Orkney
-#Error at seal 8 because outlier GPS locations and because she goes to orkney again
 
 #Remove seal 59 and 280 because there are not trips in May
 dat <- dat[-which(dat$seal_ID==59),]
@@ -126,6 +132,8 @@ dat <- dat[-which(dat$seal_ID==280),]
 df <- data.frame(seal_ID = unique(dat$seal_ID), month1_n_trips = NA,
                  month2_n_trips = NA, BA_overlap = NA)
 
+#The code calculates the overlap between the 50% UD for each individuals between May and April, and
+# saves a map of the two UDs.
 for(y in 1:length(df$seal_ID)){
   tmp <- dat[which(dat$seal_ID==df$seal_ID[y]),]
   
@@ -139,7 +147,6 @@ for(y in 1:length(df$seal_ID)){
   df$month2_n_trips[y] <- length(unique(tmpfr$ID[which(tmpfr$month==2)]))
   
   #Calculate kernel density curve
-  #h <- c(50,250,500,1000,1500,2000)
   kd <- kernelUD(spfor[,15], h=5859, grid=xy, kern=c("bivnorm"))
   
   #For each trip extract the 95% utilization distribution
@@ -216,10 +223,11 @@ for(y in 1:length(df$seal_ID)){
 }
 hist(df$BA_overlap)
 
-write.csv(df, here::here("Output","Repeatability overlap between April and May.csv"), row.names=FALSE)
+write.csv(df, here::here("Output","Repeatability - overlap between April and May.csv"), row.names=FALSE)
 
 ## Overlap null distribution ---------------------------------------------------------------------------------------
-#Randomised pair-wise comparison
+#Randomized pair-wise comparison between each individual distribution in May with a randomly
+# selected individual in April
 tmp <- unique(dat$seal_ID)
 df <- data.frame(seala = tmp, sealb= NA)
 
@@ -244,7 +252,6 @@ for(y in 1:length(df$seala)){
   
   #Calculate kernel density curve
   kd <- kernelUD(spfor[,15], h=5859, grid=xy, kern=c("bivnorm"))
-  #kd1 <- kernelUD(spfor[,1], h=5000, grid=xy3, kern=c("bivnorm"))
   
   #Calculate overlap between consecutive trips
   overlap <- kerneloverlaphr(kd, method="BA", percent=50, conditional = TRUE)
