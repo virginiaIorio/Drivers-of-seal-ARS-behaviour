@@ -3,7 +3,7 @@ R codes to reproduce the analysis presented in Iorio-Merlo et al. _submitted_. a
 The scripts provided allow to repeat the analysis presented in the publication starting from the the data available at dryad....
 
 ## R and packages
-The code was developed using R version 4.0.2.  
+The code was developed using R version 4.1.1  
 The pakages used are: 
 [adehabitatHR](https://rdocumentation.org/packages/adehabitatHR/versions/0.4.19),
 [adehabitatLT](https://rdocumentation.org/packages/adehabitatLT/versions/0.3.25),
