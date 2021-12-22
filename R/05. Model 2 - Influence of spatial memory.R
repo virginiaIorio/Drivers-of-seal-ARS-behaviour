@@ -21,7 +21,7 @@ is.integer0 <- function(x)
 }
 
 ## Load memory raster maps ------------------------------------------------------------------------
-raster_path <- here::here("Output","Memory_grids","April memory")
+raster_path <- here::here("Dryad","Outputs","April memory raster maps")
 all_rasters <- list.files(raster_path,
                           full.names = TRUE,
                           pattern = ".tif$")
@@ -30,14 +30,14 @@ Brick <- brick(stack)
 
 brick <- Brick
 Brick <- setZ(Brick, brick@data@names, name='seal_ID')
-plot(Brick$seal_14)
+plot(Brick$seal_90)
 
 Brick[is.na(Brick[])] <- 0
 
 
 ## Data preparation -----------------------------------------------------------------------------------------
 ##Read in dataset
-df <- read.csv(here::here("Output", "Dive batches dataset - 2017.csv"), header=TRUE) 
+df <- read.table(here::here("Dryad","Outputs", "Dive batches dataset - 2017.txt"),sep="\t", header=TRUE) 
 df <- df %>% mutate(
   ID = format(ID, nsmall=3),
   start.time = as.POSIXct(start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
@@ -122,7 +122,7 @@ hist(seal.HMM$angle)
 data = seal.HMM
 m_list<-list()
 n_its<-50
-output<-data.frame(iter<-seq(1,n_its), s1_mean = NA, s2_mean = NA,
+output<-data.frame(iter = seq(1,n_its), s1_mean = NA, s2_mean = NA,
                    s1_sd = NA, s2_sd = NA, s1_zero= NA, s2_zero =NA,
                    s1_angle= NA, s2_angle = NA, AIC = NA, loglik = NA)
 stateNames <- c("state1","state2")
@@ -150,12 +150,13 @@ for(i in 1:n_its){
   try(output$loglik[i]<-m_list[[i]]$mod$minimum,silent=TRUE)
   print(i)
 }
-plot(output$iter....seq.1..n_its., output$AIC)
-plot(output$iter....seq.1..n_its., output$loglik)
+plot(output$iter, output$AIC)
+plot(output$iter, output$loglik)
 
 #Include the saving output
-write.csv(output, here::here("Output","Model 2 - initial parameters selection output.csv"), row.names=TRUE)
-output <- read.csv(here::here("Output","Model 2 - initial parameters selection output.csv"))
+write.table(output, here::here("Dryad","Outputs","Model 2 - initial parameters selection output.txt"), sep="\t", row.names=TRUE)
+output <- read.table(here::here("Dryad","Outputs","Model 2 - initial parameters selection output.txt"),
+                     sep="\t", header=TRUE)
 
 ## Run simple model --------------------------------------------------------------------------------------------------------
 data=seal.HMM
@@ -204,7 +205,7 @@ step.ARS <- as.numeric(which.min(c(step.state1, step.state2)))
 
 seal.HMM$state <- ifelse(seal.HMM$HMMstate==step.ARS, "ARS", "Transit")
 
-write.csv(seal.HMM, here::here("Output", "Model 2 - HMM dive batches classified.csv"), row.names = TRUE)
+write.table(seal.HMM, here::here("Dryad","Outputs", "Model 2 - HMM dive batches classified.txt"),sep="\t", row.names = TRUE)
 
 ## Model selection with covariates -------------------------------------------------------------------------------------
 formulas.list <- c(~ memory)
@@ -232,5 +233,5 @@ model.selection$delta.AIC <- model.selection$AIC - model.selection$AIC[n]
 n <- which.min(model.selection$BIC)
 model.selection$delta.BIC <- model.selection$BIC - model.selection$BIC[n]
 
-write.csv(model.selection, here::here("Output", "Model 2 - Covariates model selection.csv"), row.names=FALSE)
+write.table(model.selection, here::here("Dryad","Outputs", "Model 2 - Covariates model selection.txt"),sep="\t", row.names=FALSE)
 

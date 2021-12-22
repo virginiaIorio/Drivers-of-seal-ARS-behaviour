@@ -16,13 +16,13 @@ df <- data.frame(ID = c(90,242,283,158,283), PTT = c(14438,14464,14477,14478,144
                  ThresholdX = NA, ThresholdY = NA, ThresholdZ = NA)
 for (x in 1:length(df$ID)){
   PTT = df$PTT[x]
-  files <- list.files(paste0(here::here("Output","Raw accelerometer data per trip"),"/",PTT))
+  files <- list.files(paste0(here::here("Dryad","Outputs","Raw accelerometer data per trip"),"/",PTT))
 
   clusterdf <- data.frame(Xsd = NA, Ysd = NA, Zsd = NA)
 
   for(l in 1:length(files)){
-    file <- read.csv(paste0(here::here("Output","Raw accelerometer data per trip"),"/",PTT,"/",files[l]))
-    file <- file[,c(1,12:14,17)]
+    file <- read.table(paste0(here::here("Dryad","Outputs","Raw accelerometer data per trip"),"/",PTT,"/",files[l]), 
+                       sep="\t", header=TRUE)
     Xsd <- as.matrix(file$Xd)
     file$Xsd  <- roll_sd(Xsd, 19)
     Ysd <- as.matrix(file$Yd)
@@ -30,7 +30,7 @@ for (x in 1:length(df$ID)){
     Zsd <- as.matrix(file$Zd)
     file$Zsd  <- roll_sd(Zsd, 19)
     file2 <- file[!is.na(file$Xsd), ]
-    tmp <- file2[,c(6:8)]
+    tmp <- select(file2, c("Xsd","Ysd","Zsd"))
     clusterdf <- rbind(clusterdf, tmp)
     print(l)
     }
@@ -49,4 +49,5 @@ for (x in 1:length(df$ID)){
   df$ThresholdZ[x] <- max(acc_clusterZ$centers)
 }
 
-write.csv(df, here::here("Output","Prey encounters - cluster analysis acis thresholds.csv"), row.names = FALSE)
+write.table(df, here::here("Dryad","Outputs","Prey encounters - cluster analysis axis thresholds.csv"), 
+            sep="\t" ,row.names = FALSE)

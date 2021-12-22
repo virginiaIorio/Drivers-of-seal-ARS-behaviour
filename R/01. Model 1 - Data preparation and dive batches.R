@@ -12,7 +12,7 @@ p_load(sp, sf, ggplot2, ggspatial, magrittr, lubridate, tidyverse, geosphere)
 
 ## Create buffers around haul-out sites ----------------------------------------------------
 #Load coastline needed for plotting
-coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
+coastline <- st_read(here::here("Dryad","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create the two haul-out sites buffers to remove locations within 2km from the haul-out site
 #Create Loch Fleet buffer based on two points
@@ -61,7 +61,7 @@ ggplot()+
 ##Read in seal dive data --------------------------------------------------------------------------------------------
 dives <- read.table(here::here("Dryad","pv64-2017_dive.txt"), sep="\t",header=TRUE)
 seal <- dives %>% 
-  select(ID,REF,PTT,DS_DATE,JUL,SURF_DUR,DE_DATE,START_LAT,START_LON,END_LAT,END_LON,Trip_Code)%>%
+  dplyr::select(ID,REF,PTT,DS_DATE,JUL,DIVE_DUR,SURF_DUR,DE_DATE,START_LAT,START_LON,END_LAT,END_LON,Trip_Code)%>%
   mutate(seal_ID = ID,
          trip_code = format(Trip_Code, nsmall=3),
          ID = trip_code,
@@ -183,7 +183,7 @@ for(n in 1:(length(seal$ID)-1)){
     options(digits=8)
     batch.tmp$batch.start.lon <- seal$START_LON[x]
     batch.tmp$batch.start.lat <- seal$START_LAT[x]
-    batch.tmp$batch.end.long <- seal$END_LON[y]
+    batch.tmp$batch.end.lon <- seal$END_LON[y]
     batch.tmp$batch.end.lat <- seal$END_LAT[y]
     
     seal.batch <- rbind(seal.batch, batch.tmp)
@@ -226,4 +226,4 @@ seal.batch <- seal.batch %>% mutate(
 
 seal.batch <- seal.batch[,-which(names(seal.batch) %in% c("times","timee","timeS","timeE","dateS","dateE"))]
 
-write.csv(seal.batch, here::here("Output","Dive batches dataset - 2017.csv"), row.names=FALSE)
+write.table(dat, here::here("Dryad","Outputs","Dive batches dataset - 2017.txt"), sep="\t", row.names=FALSE)

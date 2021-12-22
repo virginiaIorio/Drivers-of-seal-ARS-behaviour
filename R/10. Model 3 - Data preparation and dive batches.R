@@ -3,7 +3,7 @@
 ## Purpose: Select foraging trips and prepare dive bacthes for the foraging trips with accelerometer data
 ## Output: -csv with dataset
 #Created on: 04/12/2020
-#Updated on: 12/01/2021
+#Updated on: 21/12/2021
 
 #Load necessary packages
 library(pacman)
@@ -11,7 +11,7 @@ p_load(sp, sf, magrittr, lubridate, tidyverse, geosphere, ggplot2,ggspatial)
 
 ## Create buffers around haul-out sites ----------------------------------------------------
 #Load coastline needed for plotting
-coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
+coastline <- st_read(here::here("Dryad","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create the two haul-out sites buffers to remove locations within 2km from the haul-out site
 #Create Loch Fleet buffer based on two points
@@ -41,20 +41,20 @@ buffer2 <- st_union (SC_2k_buffer, SC_2k_buffer1$geometry)
 
 ## Data preparation ---------------------------------------------------------------------------------------------------
 #select only the variables used the analysis
-path <- here::here("Output","Processed accelerometer parameters")
+path <- here::here("Dryad","Outputs","Processed accelerometer parameters")
 files <- paste0(path,"/",list.files(paste0(path)))
 tables <- lapply(files, read.csv)
 seal <- do.call(rbind, tables) 
 seal <- seal %>% dplyr::select(ID,PTT,DS_DATE,DE_DATE,DIVE_DUR,SURF_DUR,MAX_DEP,START_LAT,START_LON,END_LAT,END_LON,PERCENT_AREA,
          Trip_No,Posn_in_Trip,Trip_Code,date,TAD,descent.speed,ascent.speed,B_PrCA_arch,B_pitch.diff20,
-         B_overlap_A,A_mean_pitch) %>%
+         B_overlap_A) %>%
   mutate(seal_ID = ID,
          trip_code = format(Trip_Code, nsmall=3),
          ID = trip_code,
          time = as.POSIXct(DS_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
          time.end = as.POSIXct(DE_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"))
 
-llcord <- SpatialPoints(seal[,c(9,8)],
+llcord <- SpatialPoints(seal[,c("START_LON","START_LAT")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 seal$x <- attr(utmcoord, "coords")[,1]
@@ -144,14 +144,9 @@ seal$foraging.index <- seal$B_PrCA_arch + seal$B_pitch.diff20 - seal$B_overlap_A
 seal.batch <- data.frame(seal_ID = NA, PTT = NA, trip.N = NA, ID= NA, start.time = NA, 
                          end.time = NA, batch.duration_mins = NA,
                          batch.dive.dur_secs = NA, batch.surface.dur_secs = NA, batch.max.depth = NA,
-                         batch.percent.area = NA,
-                         batch.pos.trip.start = NA, batch.pos.trip.end = NA, batch.TAD = NA,
-                         batch.descent.speed = NA, batch.ascent.speed =NA,
+                         batch.pos.trip.start = NA, batch.pos.trip.end = NA, 
                          batch.PrCA = NA, batch.benthic = NA, batch.foraging.index = NA, 
-                         batch.first.foraging = NA, batch.last.foraging = NA,
-                         batch.ascent.pitch =NA,
-                         batch.start.lon = NA,
-                         batch.start.lat = NA, batch.end.long = NA, batch.end.lat = NA)
+                         batch.start.lon = NA, batch.start.lat = NA, batch.end.long = NA, batch.end.lat = NA)
 batch.tmp <- seal.batch
 
 x <- 1
@@ -176,23 +171,16 @@ for(n in 1:(length(seal$ID)-1)){
     batch.tmp$batch.dive.dur_secs <- mean(seal$DIVE_DUR[x:y])
     batch.tmp$batch.surface.dur_secs <- mean(seal$SURF_DUR[x:y])
     batch.tmp$batch.max.depth <- mean(seal$MAX_DEP[x:y])
-    batch.tmp$batch.percent.area <- mean(seal$PERCENT_AREA[x:y])
-    batch.tmp$batch.TAD <- mean(seal$TAD[x:y], na.rm=TRUE)
-    batch.tmp$batch.descent.speed <- mean(seal$descent.speed[x:y], na.rm=TRUE)
-    batch.tmp$batch.ascent.speed <- mean(seal$ascent.speed[x:y], na.rm=TRUE)
+
     batch.tmp$batch.PrCA <- as.integer(mean(seal$B_PrCA_arch[x:y], na.rm=TRUE))
     batch.tmp$batch.benthic <- as.integer(mean(seal$B_pitch.diff20[x:y], na.rm =TRUE))
     batch.tmp$batch.foraging.index <- as.integer(mean(seal$foraging.index[x:y], na.rm =TRUE))
-    batch.tmp$batch.ascent.pitch <- mean(seal$A_mean_pitch[x:y], na.rm=TRUE)
-    
-    batch.tmp$batch.first.foraging <- seal$foraging.index[x]
-    batch.tmp$batch.last.foraging <- seal$foraging.index[y]
     
     #Batch Lat and Long
     options(digits=8)
     batch.tmp$batch.start.lon <- seal$START_LON[x]
     batch.tmp$batch.start.lat <- seal$START_LAT[x]
-    batch.tmp$batch.end.long <- seal$END_LON[y]
+    batch.tmp$batch.end.lon <- seal$END_LON[y]
     batch.tmp$batch.end.lat <- seal$END_LAT[y]
     
     seal.batch <- rbind(seal.batch, batch.tmp)
@@ -201,7 +189,7 @@ for(n in 1:(length(seal$ID)-1)){
 }
 seal.batch <- seal.batch[-c(1),]
 
-llcord <- SpatialPoints(seal.batch[,c(23,24)],
+llcord <- SpatialPoints(seal.batch[,c("batch.start.lon","batch.start.lat")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 seal.batch$x <- attr(utmcoord, "coords")[,1]
@@ -212,4 +200,5 @@ ggplot()+
   geom_point(data=seal.batch, aes(x=x, y=y))+
   theme_classic()
 
-write.csv(seal.batch, here::here("Output","Dive batches dataset - Accelerometer.csv"), row.names=FALSE)
+write.table(seal.batch, here::here("Dryad","Outputs","Dive batches dataset - Accelerometer.txt"), 
+            sep="\t", row.names=FALSE)

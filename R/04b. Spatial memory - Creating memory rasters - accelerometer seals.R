@@ -11,21 +11,20 @@ library(pacman)
 p_load(sp,rgdal, sf, tidyverse, fasterize, raster, lubridate, ggplot2, geosphere)
 
 ## Data preparation ------------------------------------------------------------------------------------
-mem <- read.csv(here::here("Output", "Model 1 - HMM dive batches classified.csv"), header=TRUE)
+mem <- read.table(here::here("Dryad","Outputs", "Model 1 - HMM dive batches classified.txt"), sep="\t", header=TRUE)
 seal.IDs <- c(90,158,242,283,285)
 mem <- mem[which(mem$seal_ID %in% seal.IDs),]
 
-mem <- mem[,-1]
 x <- 1
 for(x in 1:length(mem$ID)){
-  mid.point <- midPoint(c(mem$batch.start.lon[x], mem$batch.start.lat[x]), c(mem$batch.end.long[x], mem$batch.end.lat[x])) 
+  mid.point <- midPoint(c(mem$batch.start.lon[x], mem$batch.start.lat[x]), c(mem$batch.end.lon[x], mem$batch.end.lat[x])) 
   mem$batch.mid.point.long[x] <- mid.point[1]
   mem$batch.mid.point.lat[x] <- mid.point[2]
 }
 
 crs <- "+proj=utm +zone=30 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-llcord <- SpatialPoints(mem[,c(18,19)],
+llcord <- SpatialPoints(mem[,c("batch.mid.point.long","batch.mid.point.lat")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 mem$x <- attr(utmcoord, "coords")[,1]
@@ -34,7 +33,7 @@ maxx <- max(mem$x)
 mem_sf <- st_as_sf(mem, coords=c("x", "y"), crs=crs)
 
 ## Create empty raster -----------------------------------------------------------------------------------
-grid <- st_read(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
+grid <- st_read(here::here("Dryad","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 grid <- st_transform(grid, crs=crs)
 
 #Create raster size based on the data to analyse
@@ -76,7 +75,8 @@ dat <- dat[-1,]
 
 dat2 <- dat
 st_geometry(dat2) <- NULL
-write.csv(dat2, here::here("Output","Spatial memory - dataset for rasters - accelerometer seals.csv"), row.names = FALSE)
+write.table(dat2, here::here("Dryad","Outputs","Spatial memory - dataset for rasters - accelerometer seals.txt"), 
+            sep="\t", row.names = FALSE)
 
 ## Fill empty raster -----------------------------------------------------------------------------------
 #Calculate number of transiting and ARS dive batches occurring in each grid cells for each seal
@@ -118,6 +118,6 @@ for(y in 1:length(IDs)){
   names(rr) <- paste0("seal ",IDs[y])
   plot(rr)
 
-  outfile <- writeRaster(rr, filename=here::here("Output","Memory_grids",paste0( paste0("seal ",IDs[y]),".tiff")),
+  outfile <- writeRaster(rr, filename=here::here("Dryad","Outputs","Accelerometer memory raster maps",paste0( paste0("seal ",IDs[y]),".tiff")),
                          format="GTiff", overwrite=TRUE,options=c("INTERLEAVE=BAND","COMPRESS=LZW"), bylayer=TRUE)
 }

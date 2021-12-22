@@ -19,9 +19,9 @@ p_load(ggplot2, sf, rgdal, sp, adehabitatHR, tidyverse, magrittr, lubridate, ggs
 trip.summaries <- read.table(here::here("Dryad", "pv64-2017_trip_summaries.txt"), sep="\t",header=TRUE)
 trip.summaries$Trip_Code <- format(trip.summaries$Trip_Code, nsmall=3)
 
-dat <- read.csv(here::here("Output", "Model 1 - HMM dive batches classified.csv"), header=TRUE)
+dat <- read.table(here::here("Dryad","Outputs", "Model 1 - HMM dive batches classified.txt"), sep="\t", header=TRUE)
 dat <- dat %>%dplyr::select(ID,seal_ID,PTT,start.time,end.time,batch.duration,batch.start.lon,batch.start.lat,
-                      batch.end.long,batch.end.lat,x,y,HMMstate,state)
+                      batch.end.lon,batch.end.lat,x,y,HMMstate,state)
 
 dat$ID <- format(dat$ID, nsmall=3)
 
@@ -36,11 +36,11 @@ dat$month <- ifelse(dat$ID %in% month2, "2", dat$month)
 dat <- dat[which(dat$month>0),]
 
 #read in the coastaline shapefile as you will need it for plotting
-coastline <- st_read(here::here("Datasets","Coastline_UTM30","Coastline_UTM30.shp"))
+coastline <- st_read(here::here("Dryad","Coastline_UTM30","Coastline_UTM30.shp"))
 
 #Create grid for which you are going to calculate the kernel UD. 
 #This grid is roughly 500mx500m and fits within the original 1x1km MF grid
-grid <- readOGR(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
+grid <- readOGR(here::here("Dryad","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 x <- seq(grid@bbox[1]+250, grid@bbox[3]-250, by=500)
 y <- seq(grid@bbox[2]+250, 6600733, by=500)
 xy <- expand.grid(x=x,y=y)
@@ -223,7 +223,7 @@ for(y in 1:length(df$seal_ID)){
 }
 hist(df$BA_overlap)
 
-write.csv(df, here::here("Output","Repeatability - overlap between April and May.csv"), row.names=FALSE)
+write.table(df, here::here("Dryad","Outputs","Repeatability - overlap between April and May.txt"),  sep="\t", row.names=FALSE)
 
 ## Overlap null distribution ---------------------------------------------------------------------------------------
 #Randomized pair-wise comparison between each individual distribution in May with a randomly
@@ -260,5 +260,5 @@ for(y in 1:length(df$seala)){
   print(y)
 }
 hist(df$BA_overlap)
-write.csv(df, here::here("Output","Repeatability - null distribution overlap.csv"), row.names=FALSE)
+write.table(df, here::here("Dryad","Outputs","Repeatability - null distribution overlap.txt"), sep="\t", row.names=FALSE)
 

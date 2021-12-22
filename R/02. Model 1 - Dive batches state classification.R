@@ -22,7 +22,7 @@ is.integer0 <- function(x)
 
 # Data preparation -----------------------------------------------------------------------------------------
 ##Read in dataset
-df <- read.csv(here::here("Output", "Dive batches dataset - 2017.csv"), header=TRUE) 
+df <- read.table(here::here("Dryad","Outputs","Dive batches dataset - 2017.txt"), sep="\t", header=TRUE) 
 
 df <- df %>% mutate(
     ID = format(ID, nsmall=3),
@@ -97,14 +97,14 @@ df.HMM$step <- ifelse(df.HMM$step>max.distance, NA, df.HMM$step) ########
 hist(df.HMM$step)
 
 #Save dataset for model
-write.csv(df.HMM, here::here("Output","Model 1 - dataset.csv"), row.names=TRUE)
+write.table(df.HMM, here::here("Dryad","Outputs","Model 1 - dataset.txt"), sep="\t", row.names=TRUE)
 
 # Select model initial values ===================================================================================
 #Run f50 iterations to find best initial parameters
 data = df.HMM 
 m_list<-list()
 n_its<-50 
-output<-data.frame(iter<-seq(1,n_its), s1_mean = NA, s2_mean = NA,
+output<-data.frame(iter= seq(1,n_its), s1_mean = NA, s2_mean = NA,
                    s1_sd = NA, s2_sd = NA, s1_zero= NA, s2_zero =NA,
                    s1_angle= NA, s2_angle = NA, AIC = NA, loglik = NA)
 stateNames <- c("state1","state2")
@@ -134,11 +134,11 @@ for(i in 15:n_its){
   print(i)
 }
 
-plot(output$iter....seq.1..n_its., output$AIC)
+plot(output$iter, output$AIC)
 
 #Include the saving output
-write.csv(output, here::here("Output","Model 1 - initial parameters selection output.csv"), row.names=TRUE)
-output <- read.csv(here::here("Output","Model 1 - initial parameters selection output.csv"), header=TRUE)
+write.table(output, here::here("Dryad","Outputs","Model 1 - initial parameters selection output.txt"), sep="\t", row.names=TRUE)
+output <- read.table(here::here("Dryad","Outputs","Model 1 - initial parameters selection output.txt"), sep="\t", header=TRUE)
 
 # Running the model ###########################################################################################
 data=df.HMM
@@ -178,5 +178,5 @@ ARS <- as.numeric(which.min(c(step.state1, step.state2)))
 
 df.HMM$state <- ifelse(df.HMM$HMMstate==ARS, "ARS", "Transit")
 
-write.csv(df.HMM, here::here("Output", "Model 1 - HMM dive batches classified.csv"), row.names = TRUE)
+write.table(df.HMM, here::here("Dryad","Outputs", "Model 1 - HMM dive batches classified.txt"), sep="\t", row.names = TRUE)
 

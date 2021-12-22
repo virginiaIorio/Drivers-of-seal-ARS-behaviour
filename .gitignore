@@ -34,6 +34,7 @@
 *.sbn
 *.sbx
 *.shp.xml
+*.tif
 Graphs/
 MF_grid/
 Raster grids/
@@ -50,7 +51,8 @@ R/Relationship between acc and dive.R
 R/Track simulation.R
 Datasets/
 Datasets/Data for Patrci.R
-
-
+R/Copy of extra codes/
+R/09. Prey encounters - Processing accelerometer data - all functions.R
+R/08. Prey encounter - Accelerometer processing functions - all functions.R
 
 

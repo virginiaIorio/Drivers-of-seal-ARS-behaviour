@@ -11,20 +11,19 @@ library(pacman)
 p_load(sp,rgdal, sf, tidyverse, fasterize, raster, lubridate, ggplot2, geosphere)
 
 ## Data preparation ------------------------------------------------------------------------------------
-mem <- read.csv(here::here("Output", "Model 1 - HMM dive batches classified.csv"), header=TRUE)
+mem <- read.table(here::here("Dryad","Outputs", "Model 1 - HMM dive batches classified.txt"), sep="\t", header=TRUE)
 
-mem <- mem[,-1]
 x <- 1
 #Calculate mid point of each batch 
 for(x in 1:length(mem$ID)){
-  mid.point <- midPoint(c(mem$batch.start.lon[x], mem$batch.start.lat[x]), c(mem$batch.end.long[x], mem$batch.end.lat[x])) 
+  mid.point <- midPoint(c(mem$batch.start.lon[x], mem$batch.start.lat[x]), c(mem$batch.end.lon[x], mem$batch.end.lat[x])) 
   mem$batch.mid.point.long[x] <- mid.point[1]
   mem$batch.mid.point.lat[x] <- mid.point[2]
 }
 
 crs <- "+proj=utm +zone=30 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-llcord <- SpatialPoints(mem[,c("batch.start.lon","batch.start.lat")],
+llcord <- SpatialPoints(mem[,c("batch.mid.point.long","batch.mid.point.lat")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
 utmcoord <- spTransform(llcord, CRS("+proj=utm +zone=30 ellps=WGS84"))
 mem$x <- attr(utmcoord, "coords")[,1]
@@ -33,14 +32,14 @@ maxx <- max(mem$x)
 mem_sf <- st_as_sf(mem, coords=c("x", "y"), crs=crs)
 
 ## Create empty raster -----------------------------------------------------------------------------------
-grid <- st_read(here::here("Datasets","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
+grid <- st_read(here::here("Dryad","Moray_Firth_1km_grid_shapefile","MF_grid_1km_UTM30.shp"))
 grid <- st_transform(grid, crs=crs)
 
 grid.matrix <- matrix(unlist(grid$geometry), ncol=10, byrow=TRUE)
 grid.matrix <- as.data.frame(grid.matrix)
 grid.matrix$unique.id <- grid$grid_id
 
-ext <- extent(min(grid.matrix[,c(1:5)]), max(grid.matrix[,c(1:5)]), min(grid.matrix[,c(6:10)]), max(grid.matrix[,c(6:10)]))
+ext <- raster::extent(min(grid.matrix[,c(1:5)]), max(grid.matrix[,c(1:5)]), min(grid.matrix[,c(6:10)]), max(grid.matrix[,c(6:10)]))
 gridsize <- 1000 #meters
 r <- raster(ext, res=gridsize)
 
@@ -56,11 +55,10 @@ mem_sf$ID <- format(mem_sf$ID, nsmall=3)
 
 mem_apr <- mem_sf[which(mem_sf$ID %in% April.trips),]
 
-write.csv(mem_apr, here::here("Output","Spatial memory - dataset for rasters all seals.csv"), row.names = FALSE)
+write.table(mem_apr, here::here("Dryad","Outputs","Spatial memory - dataset for rasters all seals.txt"), sep="\t",row.names = FALSE)
 
 ## Fill empty raster -----------------------------------------------------------------------------------
 #Calculate number of transiting and ARS dive batches occurring in each grid cells for each seal
-
 IDs <- unique(mem_apr$seal_ID)
 #Create raster brick
 rasterIds <- unique(grid$grid_id)
@@ -97,7 +95,7 @@ for(y in 1:length(IDs)){
   names(rr) <- paste0("seal ",IDs[y])
   plot(rr)
   
-  outfile <- writeRaster(rr, filename=here::here("Output","Memory_grids","April memory",paste0( paste0("seal ",IDs[y]),".tiff")),
+  outfile <- writeRaster(rr, filename=here::here("Dryad","Outputs","April memory raster maps",paste0( paste0("seal ",IDs[y]),".tiff")),
                          format="GTiff", overwrite=TRUE,options=c("INTERLEAVE=BAND","COMPRESS=LZW"), bylayer=TRUE)
 }
 
