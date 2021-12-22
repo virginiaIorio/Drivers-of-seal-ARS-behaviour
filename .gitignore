@@ -34,6 +34,7 @@
 *.sbn
 *.sbx
 *.shp.xml
+*.tif
 Graphs/
 MF_grid/
 Raster grids/
@@ -43,5 +44,15 @@ Figures/
 R/Old R codes/
 R/Environment saved/
 .Rproj.user
-R/11. Figures and tables.R
+R/12. Figures and tables.R
 R/Figures - MomentuHMM specific functions.R
+R/Appendix B.R
+R/Relationship between acc and dive.R
+R/Track simulation.R
+Datasets/
+Datasets/Data for Patrci.R
+R/Copy of extra codes/
+R/09. Prey encounters - Processing accelerometer data - all functions.R
+R/08. Prey encounter - Accelerometer processing functions - all functions.R
+
+

@@ -1,55 +1,69 @@
 ## Assign HMM state to dive batches and test covariates effect 
 ##Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
 ##Purpose: The code uses an Hidden Markov Model to classify harbour seal dive batches into transit and ARS state.
-#           I also assess the influence of spatial memory and prey encounter on the transition probability.
+#          I also assess the influence of spatial memory on the transition probability.
+#          This code model seal's movement in May to test the influence of memory adcquired in April.
 ##Output: Dataset with step length and turning angle, output of the iteration with the selection of 
 #         initial parameters, output of the covariates selection process, final dataset with the HMM state classification
-#Created on: 04/12/2020
-#Updated on: 13/01/2021
+#Created on: 10/12/2021
+#Updated on: 16/12/2021
 
 library(pacman)
-p_load(sp, sf, magrittr, lubridate, tidyverse, geosphere, momentuHMM, ggplot2, raster)
+p_load(momentuHMM, ggplot2, magrittr, tidyverse, raster)
 
 is.between<-function(x, a, b) {
   (x >= a) & (b >= x)
 }
+
 is.integer0 <- function(x)
 {
   is.integer(x) && length(x) == 0L
 }
 
 ## Load memory raster maps ------------------------------------------------------------------------
-raster_path <- here::here("Output","Memory_grids")
+raster_path <- here::here("Dryad","Outputs","April memory raster maps")
 all_rasters <- list.files(raster_path,
                           full.names = TRUE,
                           pattern = ".tif$")
 stack <- stack(all_rasters)
 Brick <- brick(stack)
 
-IDs <- c(242,90,285,158,283)
-Brick@data@names <- as.character(IDs)
-Brick <- setZ(Brick, IDs, name='seal_ID')
-plot(Brick$X90)
+brick <- Brick
+Brick <- setZ(Brick, brick@data@names, name='seal_ID')
+plot(Brick$seal_90)
 
 Brick[is.na(Brick[])] <- 0
 
 
 ## Data preparation -----------------------------------------------------------------------------------------
 ##Read in dataset
-df <- read.csv(here::here("Output", "Dive batches dataset - Accelerometer.csv"), header=TRUE) 
+df <- read.table(here::here("Dryad","Outputs", "Dive batches dataset - 2017.txt"),sep="\t", header=TRUE) 
 df <- df %>% mutate(
   ID = format(ID, nsmall=3),
   start.time = as.POSIXct(start.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
   end.time = as.POSIXct(end.time, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
   batch.duration = as.numeric(difftime(end.time, start.time, units = "mins")))
 
+df$seal_ID <- paste0("seal_",df$seal_ID)
+
 tmp <- df %>% group_by(df$ID) %>% summarise(n=n())
 short.trips <- tmp$`df$ID`[which(tmp$n<3)]
 df <- df[which(!df$ID %in% short.trips),]
 
+#Select only trips in May
+trip <- read.table(here::here("Dryad","pv64-2017_trip_summaries.txt"),sep="\t", head=TRUE)
+trip$month <- lubridate::month(trip$Trip_Start)
+trip$Trip_Code <- format(trip$Trip_Code, nsmall=3)
+
+May.trips <- trip$Trip_Code[which(trip$month==5)]
+
+df2 <- df[which(df$ID %in% May.trips),]
+
+#For now remove the seal that goes to Orkney as it goes above the raster
+df2 <- df2[-which(df2$seal_ID=="seal_384"),]
 
 ##Prepare data for HMM
-seal.HMM <- prepData(df, type="UTM", coordNames=c("x", "y"), spatialCovs = list(memory=Brick))
+seal.HMM <- prepData(df2, type="UTM", coordNames=c("x", "y"), spatialCovs = list(memory=Brick))
 
 
 ##Flag uncertain locations
@@ -68,7 +82,6 @@ flag.tmp[1,] <- NA
 flag.tmp$flag <- NA
 
 #Flagging for batch data
-  
 for(i in 1:length(trips)){
   HMM_tmp <- subset(seal.HMM, seal.HMM$ID==trips[i])
   gps_tmp <- subset(gps, gps$trip_code==trips[i])
@@ -105,15 +118,11 @@ seal.HMM$angle <- ifelse(seal.HMM$step>max.distance, NA, seal.HMM$angle)
 hist(seal.HMM$step)
 hist(seal.HMM$angle)
 
-#Save dataset for model
-write.csv(seal.HMM, here::here("Output","Model 2 - dataset.csv"), row.names=TRUE)
-
-
 ## Select model initial parameters ------------------------------------------------------------------------------------
 data = seal.HMM
 m_list<-list()
 n_its<-50
-output<-data.frame(iter<-seq(1,n_its), s1_mean = NA, s2_mean = NA,
+output<-data.frame(iter = seq(1,n_its), s1_mean = NA, s2_mean = NA,
                    s1_sd = NA, s2_sd = NA, s1_zero= NA, s2_zero =NA,
                    s1_angle= NA, s2_angle = NA, AIC = NA, loglik = NA)
 stateNames <- c("state1","state2")
@@ -141,12 +150,13 @@ for(i in 1:n_its){
   try(output$loglik[i]<-m_list[[i]]$mod$minimum,silent=TRUE)
   print(i)
 }
-plot(output$iter....seq.1..n_its., output$AIC)
-plot(output$iter....seq.1..n_its., output$loglik)
+plot(output$iter, output$AIC)
+plot(output$iter, output$loglik)
 
 #Include the saving output
-write.csv(output, here::here("Output","Model 2 - initial parameters selection output.csv"), row.names=TRUE)
-output <- read.csv(here::here("Output","Model 2 - initial parameters selection output.csv"))
+write.table(output, here::here("Dryad","Outputs","Model 2 - initial parameters selection output.txt"), sep="\t", row.names=TRUE)
+output <- read.table(here::here("Dryad","Outputs","Model 2 - initial parameters selection output.txt"),
+                     sep="\t", header=TRUE)
 
 ## Run simple model --------------------------------------------------------------------------------------------------------
 data=seal.HMM
@@ -170,13 +180,37 @@ AIC(ms)
 -2*(-ms$mod$minimum)+length(ms$mod$wpar)*log(length(data$ID))
 plot(ms, plotTracks = FALSE)
 
-## Model selection with covariates -------------------------------------------------------------------------------------
-formulas.list <- c(~ batch.foraging.index + memory,
-                   ~ batch.foraging.index,
-                   ~ memory)
+## Model 2 - drivers of ARS ------------------------------------------------------------------------------------------
+formula <- ~  memory
+Par0 <- getPar0(ms, nbStates = nbstates, formula=formula)
+m2 <- fitHMM(data=data, nbStates= nbstates, dist=dist, 
+             Par0=list(step=Par0$Par$step, angle=Par0$Par$angle),
+             stateNames=stateNames, formula= formula) 
+m2
+-m2$mod$minimum #Log-likelihood
+AIC(m2) #AIC
+-2*(-m2$mod$minimum)+length(m2$mod$wpar)*log(length(data$ID)) #BIC
 
-model.selection <- data.frame("covariate formula" = c("null model", "~ batch.foraging.index + memory",
-                                                     "~ batch.foraging.index", "~ memory"), 
+plot(m2, plotCI=TRUE, plotTracks=FALSE)
+plotPR(m2)
+plotStationary(m2, plotCI=TRUE)
+
+seal.HMM$HMMstate <- viterbi(m2)
+seal.HMM$HMMstate <- ifelse(seal.HMM$flag==1, NA, seal.HMM$HMMstate)
+
+step.state1 <- m2[["mle"]][["step"]][1]
+step.state2 <- m2[["mle"]][["step"]][3]
+
+step.ARS <- as.numeric(which.min(c(step.state1, step.state2)))
+
+seal.HMM$state <- ifelse(seal.HMM$HMMstate==step.ARS, "ARS", "Transit")
+
+write.table(seal.HMM, here::here("Dryad","Outputs", "Model 2 - HMM dive batches classified.txt"),sep="\t", row.names = TRUE)
+
+## Model selection with covariates -------------------------------------------------------------------------------------
+formulas.list <- c(~ memory)
+
+model.selection <- data.frame("covariate formula" = c("null model","~ memory"), 
                               "log-likelihood" = c(-ms$mod$minimum,NA,NA,NA),
                               "AIC" = c(AIC(ms),NA,NA,NA), 
                               "BIC" = c(-2*(-ms$mod$minimum)+length(ms$mod$wpar)*log(length(data$ID)),NA,NA,NA))
@@ -199,28 +233,5 @@ model.selection$delta.AIC <- model.selection$AIC - model.selection$AIC[n]
 n <- which.min(model.selection$BIC)
 model.selection$delta.BIC <- model.selection$BIC - model.selection$BIC[n]
 
-write.csv(model.selection, here::here("Output", "Model 2 - Covariates model selection.csv"), row.names=FALSE)
-
-## Model 2 - drivers of ARS ------------------------------------------------------------------------------------------
-formula <- ~ batch.foraging.index + memory
-Par0 <- getPar0(ms, nbStates = nbstates, formula=formula)
-m2 <- fitHMM(data=data, nbStates= nbstates, dist=dist, 
-            Par0=list(step=Par0$Par$step, angle=Par0$Par$angle),
-            stateNames=stateNames, formula= formula) 
-
--m2$mod$minimum #Log-likelihood
-AIC(m2) #AIC
--2*(-m2$mod$minimum)+length(m2$mod$wpar)*log(length(data$ID)) #BIC
-
-plot(m2, plotCI=TRUE, plotTracks=FALSE)
-plotPR(m2)
-plotStationary(m2, plotCI=TRUE)
-
-seal.HMM$HMMstate <- viterbi(m2)
-seal.HMM$HMMstate <- ifelse(seal.HMM$flag==1, NA, seal.HMM$HMMstate)
-seal.HMM$state <- ifelse(seal.HMM$HMMstate==1, "ARS", "Transit")
-
-write.csv(seal.HMM, here::here("Output", "Model 2 - HMM dive batches classified.csv"), row.names = TRUE)
-
-
+write.table(model.selection, here::here("Dryad","Outputs", "Model 2 - Covariates model selection.txt"),sep="\t", row.names=FALSE)
 

@@ -1,11 +1,9 @@
 ### Fuctions created to process the accelerometer data
 # Author: Virginia Iorio (v.iorio1.18@abdn.ac.uk)
 # Purpose: Functions created to calculate various accelerometer outputs:
-#          1. Swimming effort as the absolute acceleration on the Y axes
-#          2. Prey catch attempts using the "transmitted" method described in Cox et al. 2018
-#          3. Prey catch attempts using the "archived" method described in Cox et al. 2018
-#          4. Find peaks function used the pitch angle analysis for the benthic attempts
-#          5. Prey catch attempts using body pitch angle, based on Brasseur et al 2012
+#          1. Prey catch attempts using the "archived" method described in Cox et al. 2018
+#          2. Find peaks function used the pitch angle analysis for the benthic attempts
+#          3. Prey catch attempts using body pitch angle, based on Brasseur et al 2012
 
 #References:
 #Brasseur, S., et al. (2012). Habitat Preferences of Harbour Seals in the Dutch Coastal Area: Analysis and Estimate of Effects of Offshore Wind Farms (Report No. OWEZ R 252 T1 20120130 C043-10), IMARES - Wageningen UR, Noordzeewind: 58.
@@ -18,71 +16,6 @@
 ## Empty vector --------------------------------------------------------------------------------------------------
 # Find out if a vector is empty 
 vector.is.empty <- function(x) return(length(x) ==0)
-
-
-# Calculate swimming effort--------------------------------------------------------------------------------------------------
-#a=column with Yabsolute values, n= length of the column, e= minpeakheight, f= minpeakdistance
-swim_eff = function(colNamestr,dive1,n,peakheight,peakdistance){
-  peaks <- findpeaks(get(colNamestr), minpeakheight = peakheight, minpeakdistance = peakdistance) 
-  if(vector.is.empty(peaks)) {
-    stroke_rate <- NA
-    start_dive <- dive1$posix[1]
-    end_dive <- dive1$posix[length(dive1$DATE)]
-    t <- as.numeric(difftime(end_dive, start_dive, unit="secs"))
-    dive1$m_s <- dive1$YDabs*9.80665
-    swim_eff.g <- sum(dive1$YDabs)/t
-    swim_eff.m_s <- sum(dive1$m_s)/t
-    output <- data.frame("stroke_rate" = stroke_rate, "swim_eff.g" = swim_eff.g, 
-                         "swim_eff.m_s" = swim_eff.m_s)
-  } else{
-    peaks <- as.data.frame(peaks)
-    peaks_index <- peaks$V2
-    dive1$row.num <- seq(1, n, 1)
-    for(i in 1:n){
-      if(dive1$row.num[i] %in% peaks_index){
-        dive1$peak[i] <- 1
-      } else{dive1$peak[i] <- 0}
-    }
-    start_dive <- dive1$posix[1]
-    end_dive <- dive1$posix[length(dive1$DATE)]
-    t <- as.numeric(difftime(end_dive, start_dive, unit="secs"))
-    eff <- filter(dive1, peak> 0) #Threhsold from Heerah 0.2 m/s = 0.02 g
-    stroke_rate <- length(eff$DATE)/t
-    dive1$m_s <- dive1$YDabs*9.80665
-    swim_eff.g <- sum(dive1$YDabs)/t
-    swim_eff.m_s <- sum(dive1$m_s)/t
-    output <- data.frame("stroke_rate" = stroke_rate, "swim_eff.g" = swim_eff.g, 
-                         "swim_eff.m_s" = swim_eff.m_s)
-    return(output)
-  }
-}
-
-
-
-## Transmitted PrCA --------------------------------------------------------------------------------------------------
-# Calculate Prey catch attempts using the simplified method of Cox et al.
-varS_fun = function(a,i){
-  sum(abs(a[i]-a[i-1]), na.rm=TRUE)
-}
-
-PRCA_transmit = function(dfNameStr, colNamestr, magA, window, observation, threshold_g){
-  require(dplyr)
-  require(magrittr)
-  df <- get(dfNameStr)
-  dat <- df %>% group_by(get(colNamestr)) %>% 
-    summarise(varS= varS_fun(get(magA),(2:n())))
-  dat1 <- as.matrix(dat$varS)
-  dat$varA <- roll_mean(dat1, width = window, min_obs = observation)
-  dat$diff <- dat$varS-dat$varA
-  dat$PrCA <- ifelse(dat$diff >= threshold_g, 1, 0)
-  dat <- dat[!is.na(dat$varS), ]
-  
-  attempts = sum(dat$PrCA, na.rm = TRUE)
-  df_Prca <- data.frame("attempts" = attempts)
-  time_PrCA <- subset(dat, dat$PrCA==1)
-  return(list(df_Prca, time_PrCA))
-  return(df_Prca)
-}
 
 ## Archived PrCA --------------------------------------------------------------------------------------------------
 # Calculate Prey catch attempts using the archival method of Cox et al.
