@@ -43,16 +43,16 @@ buffer2 <- st_union (SC_2k_buffer, SC_2k_buffer1$geometry)
 #select only the variables used the analysis
 path <- here::here("Dryad","Outputs","Processed accelerometer parameters")
 files <- paste0(path,"/",list.files(paste0(path)))
-tables <- lapply(files, read.csv)
+tables <- lapply(files,function(x)read.table(x,header=TRUE,sep="\t"))
 seal <- do.call(rbind, tables) 
 seal <- seal %>% dplyr::select(ID,PTT,DS_DATE,DE_DATE,DIVE_DUR,SURF_DUR,MAX_DEP,START_LAT,START_LON,END_LAT,END_LON,PERCENT_AREA,
-         Trip_No,Posn_in_Trip,Trip_Code,date,TAD,descent.speed,ascent.speed,B_PrCA_arch,B_pitch.diff20,
-         B_overlap_A) %>%
+                               Trip_No,Posn_in_Trip,Trip_Code,date,PrCA,pitch.diff20,overlap) %>%
   mutate(seal_ID = ID,
          trip_code = format(Trip_Code, nsmall=3),
          ID = trip_code,
          time = as.POSIXct(DS_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"),
          time.end = as.POSIXct(DE_DATE, format="%Y-%m-%d %H:%M:%S", tz="UTC"))
+
 
 llcord <- SpatialPoints(seal[,c("START_LON","START_LAT")],
                         proj4string = CRS("+proj=longlat +datum=WGS84"))
