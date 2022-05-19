@@ -26,7 +26,7 @@ The pakages used are:
  
 
 ## Scripts
-In the folder R there are 12 scripts which should be run in the order they are numbered. Scripts 1-10 are used to prepare the data, run the analysis and generate outputs. All figures and tables are created using script 11.
+In the folder R there are 11 scripts which should be run in the order they are numbered. Scripts are used to prepare the data, run the analysis and generate outputs. 
 
 * **01. Model 1 - Data preparation and dive batches**  
 This code is used for the initial filtering of the dive data and the grouping of dives in 5 dive batches. It filters dives that are within 2km of the haul-out sites. Then it filters for foraging trips (i.e. round-trips to the same haul-out site longer than 12 hours) and removes trips that occurred in the first week post-tagging.
