@@ -1,6 +1,6 @@
 # Prey encounters and spatial memory influence use of foraging patches in a marine central place forager
-R codes to reproduce the analysis presented in Iorio-Merlo et al. _submitted_. add link
-The scripts provided allow to repeat the analysis presented in the publication starting from the the data available at dryad....
+R codes to reproduce the analysis presented in [Iorio-Merlo et al. 2021](https://royalsocietypublishing.org/doi/10.1098/rspb.2021.2261)
+The scripts provided allow to repeat the analysis presented in the publication starting from the the data available at [dryad](https://datadryad.org/stash/dataset/doi:10.5061/dryad.6q573n601)
 
 ## R and packages
 The code was developed using R version 4.1.1  
